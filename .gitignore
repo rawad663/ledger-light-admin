@@ -5,6 +5,8 @@
 ./backend/.env
 ./backend/.env.*
 
+backend/src/prisma/generated
+
 # node
 node_modules
 npm-debug.log*
