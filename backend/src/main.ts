@@ -21,6 +21,9 @@ async function bootstrap() {
     .setVersion('1.0')
     .build();
 
+  /**
+   * Swagger docs available at http://localhost:8080/docs
+   */
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
