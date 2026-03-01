@@ -6,9 +6,20 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Copy app
+# Copy prisma schema BEFORE generate
+COPY prisma ./prisma
+
+# Copy the rest of the app
 COPY . .
 
-EXPOSE 8080
+# allow the URL to be passed in during build
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL:-"postgresql://postgres:postgres@localhost:5432/ledgerlight?sslmode=disable"}
 
-CMD ["npm", "run", "dev"]
+# Generate Prisma client
+RUN npx prisma generate
+
+# TODO: Change to start:prod when ready for production
+# CMD ["npm", "run", "start:prod"]
+
+CMD ["npm", "run", "start:dev"]

@@ -12,3 +12,6 @@ Monorepo structure:
 cp .env.example .env
 docker compose up --build
 ```
+
+## Swagger Docs
+Available at `http://localhost:8080/docs`
