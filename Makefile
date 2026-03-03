@@ -21,3 +21,6 @@ logs:
 
 run-migrations:
 	docker compose exec backend npx prisma migrate dev
+
+run-seed:
+	docker compose exec backend npx tsx prisma/seed.ts
