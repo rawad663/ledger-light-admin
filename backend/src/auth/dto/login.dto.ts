@@ -7,7 +7,12 @@ export class LoginDto {
   @IsString()
   @MinLength(8)
   password: string;
+}
+
+export class RefreshTokenDto {
+  @IsString()
+  refreshTokenRaw: string;
 
   @IsUUID('loose')
-  organizationId: string;
+  userId: string;
 }
