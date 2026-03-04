@@ -3,7 +3,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 
-import { LoginDto } from './dto/login.dto';
+import { LoginDto, RefreshTokenDto } from './dto/login.dto';
 import { PrismaService } from '@src/prisma/prisma.service';
 
 @Injectable()
@@ -13,10 +13,9 @@ export class AuthService {
     private readonly prismaService: PrismaService,
   ) {}
 
-  async login({ email, password, organizationId }: LoginDto) {
+  async login({ email, password }: LoginDto) {
     const user = await this.prismaService.user.findUnique({
       where: { email },
-      include: { memberships: true },
     });
 
     if (!user || !user.isActive) {
@@ -32,20 +31,9 @@ export class AuthService {
       );
     }
 
-    const validMembership = user.memberships.find(
-      (membership) => membership.organizationId === organizationId,
-    );
-    if (!validMembership) {
-      throw new UnauthorizedException(
-        'User does not belong to the specified organization',
-      );
-    }
-
     const payload = {
       sub: user.id,
       email: user.email,
-      role: validMembership.role,
-      organizationId,
     };
     const accessToken = await this.jwtService.signAsync(payload);
 
@@ -61,10 +49,58 @@ export class AuthService {
       },
     });
 
+    const updatedUser = await this.prismaService.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+      include: { memberships: true },
+    });
+
     return {
       accessToken,
       refreshTokenRaw: refreshTokenRaw,
       refreshToken: refreshToken,
+      user: updatedUser,
+    };
+  }
+
+  async refresh({ refreshTokenRaw, userId }: RefreshTokenDto) {
+    const validRefreshTokens = await this.prismaService.refreshToken.findMany({
+      where: {
+        userId,
+        expiresAt: { gt: new Date() },
+        revokedAt: null,
+      },
+    });
+
+    if (!validRefreshTokens || validRefreshTokens.length === 0) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const ok = validRefreshTokens.some(({ tokenHash }) =>
+      bcrypt.compareSync(refreshTokenRaw, tokenHash),
+    );
+    if (!ok) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException(
+        'Invalid refresh token, user not found or inactive',
+      );
+    }
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+    };
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    return {
+      accessToken,
       user,
     };
   }
