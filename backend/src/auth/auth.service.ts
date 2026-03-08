@@ -31,12 +31,6 @@ export class AuthService {
       );
     }
 
-    const payload = {
-      sub: user.id,
-      email: user.email,
-    };
-    const accessToken = await this.jwtService.signAsync(payload);
-
     const refreshTokenRaw = crypto.randomBytes(48).toString('base64url');
     const refreshTokenHash = await bcrypt.hash(refreshTokenRaw, 10);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
@@ -52,8 +46,14 @@ export class AuthService {
     const updatedUser = await this.prismaService.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
-      include: { memberships: true },
+      omit: { passwordHash: true },
     });
+
+    const payload = {
+      sub: user.id,
+      user: updatedUser,
+    };
+    const accessToken = await this.jwtService.signAsync(payload);
 
     return {
       accessToken,
@@ -85,6 +85,7 @@ export class AuthService {
 
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
+      omit: { passwordHash: true },
     });
 
     if (!user || !user.isActive) {
@@ -95,7 +96,7 @@ export class AuthService {
 
     const payload = {
       sub: user.id,
-      email: user.email,
+      user,
     };
     const accessToken = await this.jwtService.signAsync(payload);
 
@@ -103,5 +104,18 @@ export class AuthService {
       accessToken,
       user,
     };
+  }
+
+  async logout(userId: string) {
+    await this.prismaService.refreshToken.updateMany({
+      where: {
+        userId,
+        expiresAt: { gt: new Date() },
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
   }
 }
