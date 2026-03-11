@@ -10,6 +10,7 @@
 
 backend/src/prisma/generated
 backend/prisma/generated
+backend/coverage
 
 # node
 node_modules
