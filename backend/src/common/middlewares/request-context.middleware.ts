@@ -8,10 +8,16 @@ export interface RequestWithContext extends Request {
   startTime?: bigint;
 }
 
+export const REQUEST_HEADER = 'X-Request-Id';
+
 @Injectable()
 export class RequestContextMiddleware implements NestMiddleware {
-  use(req: RequestWithContext, _res: Response, next: NextFunction) {
-    req.requestId = req.headers['x-request-id']?.toString() || randomUUID();
+  use(req: RequestWithContext, res: Response, next: NextFunction) {
+    const requestId = req.headers[REQUEST_HEADER]?.toString() || randomUUID();
+
+    req.requestId = requestId;
+    res.setHeader('X-Request-Id', requestId);
+
     req.startTime = process.hrtime.bigint();
     next();
   }
