@@ -83,8 +83,21 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^@src/(.*)$": "<rootDir>/$1",
+      "^@prisma/generated/client$": "<rootDir>/test-utils/prisma-client.mock.ts",
+      "^@prisma/generated/(.*)$": "<rootDir>/../prisma/generated/$1"
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/test-utils/setup.ts"
+    ],
+    "clearMocks": true,
+    "resetMocks": true,
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!main.ts",
+      "!**/*.module.ts",
+      "!**/test-utils/**"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"

@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import {
+  OrganizationContextGuard,
+  JwtAuthGuard,
+  RolesGuard,
+} from './auth/guards';
+import { PrismaService } from './prisma/prisma.service';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -8,7 +14,22 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService],
+      providers: [
+        AppService,
+        {
+          provide: OrganizationContextGuard,
+          useValue: { canActivate: jest.fn().mockReturnValue(true) },
+        },
+        {
+          provide: JwtAuthGuard,
+          useValue: { canActivate: jest.fn().mockReturnValue(true) },
+        },
+        {
+          provide: RolesGuard,
+          useValue: { canActivate: jest.fn().mockReturnValue(true) },
+        },
+        { provide: PrismaService, useValue: {} },
+      ],
     }).compile();
 
     appController = app.get<AppController>(AppController);
@@ -16,7 +37,11 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+      const req: any = {
+        user: { id: 'u1' },
+        organization: { organizationId: 'org', role: 'MANAGER' },
+      };
+      expect(appController.getHello(req)).toBe('Hello World!');
     });
   });
 });
