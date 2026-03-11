@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import {
   OrganizationContextGuard,
   JwtAuthGuard,
   RolesGuard,
 } from '@src/common/guards';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaService } from '@src/infra/prisma/prisma.service';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 describe('AppController', () => {
   let appController: AppController;

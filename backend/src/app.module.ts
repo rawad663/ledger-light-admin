@@ -6,7 +6,7 @@ import { HealthModule } from '@src/domain/health/health.module';
 import { AuthModule } from '@src/domain/auth/auth.module';
 import { CustomerModule } from '@src/domain/customer/customer.module';
 
-import { PrismaModule } from './prisma/prisma.module';
+import { PrismaModule } from './infra/prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 

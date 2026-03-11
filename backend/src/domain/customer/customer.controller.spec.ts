@@ -6,7 +6,7 @@ import {
   JwtAuthGuard,
   RolesGuard,
 } from '@src/common/guards';
-import { PrismaService } from '@src/prisma/prisma.service';
+import { PrismaService } from '@src/infra/prisma/prisma.service';
 import type { RequestWithUser } from '@src/domain/auth/strategies/jwt.strategy';
 
 describe('CustomerController', () => {

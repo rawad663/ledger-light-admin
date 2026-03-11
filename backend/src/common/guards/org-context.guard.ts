@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { RequestWithUser } from '@src/domain/auth/strategies/jwt.strategy';
-import { PrismaService } from '@src/prisma/prisma.service';
+import { PrismaService } from '@src/infra/prisma/prisma.service';
 
 const ORGANIZATION_HEADER_KEY = 'x-organization-id';
 
