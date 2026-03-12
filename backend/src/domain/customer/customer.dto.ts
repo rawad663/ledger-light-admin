@@ -8,7 +8,6 @@ import {
   IsEmail,
   IsUUID,
   IsArray,
-  Validate,
   ValidateNested,
   Max,
   Min,
