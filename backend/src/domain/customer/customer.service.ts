@@ -96,4 +96,12 @@ export class CustomerService {
 
     return customer;
   }
+
+  async deleteCustomer({ organizationId, customerId }: GetCustomerByIdArgs) {
+    const customer = await this.prismaService.customer.delete({
+      where: { id: customerId, organizationId },
+    });
+
+    return customer;
+  }
 }

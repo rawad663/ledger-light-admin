@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -99,6 +100,21 @@ export class CustomerController {
       organizationId: req.organization?.organizationId,
       customerId: id,
       customerData,
+    });
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete Individual Customer' })
+  @ApiOkResponse({ type: CustomersDto })
+  @Authorized('ADMIN')
+  deleteCustomer(@Param('id') id: string, @Request() req: RequestWithUser) {
+    if (!req.organization) {
+      throw new ForbiddenException('Organization context is missing');
+    }
+
+    return this.customerService.deleteCustomer({
+      organizationId: req.organization?.organizationId,
+      customerId: id,
     });
   }
 }
