@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Customer } from '@prisma/generated/client';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
-import { GetCustomersQueryParamDto } from './customer.dto';
+import {
+  CreateCustomerDto,
+  GetCustomersQueryParamDto,
+  UpdateCustomerDto,
+} from './customer.dto';
 
 export type GetCustomersArgs = {
   organizationId: string;
@@ -54,6 +58,49 @@ export class CustomerService {
     if (!customer) {
       throw new NotFoundException('Customer not found');
     }
+
+    return customer;
+  }
+
+  async createCustomer({
+    organizationId,
+    customerData,
+  }: {
+    organizationId: string;
+    customerData: CreateCustomerDto;
+  }) {
+    const customer = await this.prismaService.customer.create({
+      data: {
+        ...customerData,
+        status: 'ACTIVE',
+        organizationId,
+      },
+    });
+
+    return customer;
+  }
+
+  async updateCustomer({
+    organizationId,
+    customerId,
+    customerData,
+  }: {
+    organizationId: string;
+    customerId: string;
+    customerData: Partial<UpdateCustomerDto>;
+  }) {
+    const customer = await this.prismaService.customer.update({
+      where: { id: customerId, organizationId },
+      data: customerData,
+    });
+
+    return customer;
+  }
+
+  async deleteCustomer({ organizationId, customerId }: GetCustomerByIdArgs) {
+    const customer = await this.prismaService.customer.delete({
+      where: { id: customerId, organizationId },
+    });
 
     return customer;
   }

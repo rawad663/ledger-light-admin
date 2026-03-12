@@ -1,11 +1,27 @@
-import { Controller, Get, Param, Query, Request } from '@nestjs/common';
-import { OrgProtected } from '@src/common/decorators/auth.decorator';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+} from '@nestjs/common';
+import {
+  Authorized,
+  OrgProtected,
+} from '@src/common/decorators/auth.decorator';
 import { CustomerService } from './customer.service';
 import type { RequestWithUser } from '@src/domain/auth/strategies/jwt.strategy';
 import {
+  CreateCustomerDto,
   CustomersDto,
   GetCustomersQueryParamDto,
   GetCustomersResponseDto,
+  UpdateCustomerDto,
 } from './customer.dto';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
@@ -23,7 +39,7 @@ export class CustomerController {
     @Query() query: GetCustomersQueryParamDto,
   ): Promise<GetCustomersResponseDto> {
     if (!req.organization) {
-      throw new Error('Organization context is missing');
+      throw new ForbiddenException('Organization context is missing');
     }
 
     return this.customerService.getCustomers({
@@ -40,10 +56,63 @@ export class CustomerController {
     @Param('id') id: string,
   ): Promise<CustomersDto> {
     if (!req.organization) {
-      throw new Error('Organization context is missing');
+      throw new ForbiddenException('Organization context is missing');
     }
 
     return this.customerService.getCustomerById({
+      organizationId: req.organization?.organizationId,
+      customerId: id,
+    });
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create Individual Customer' })
+  @ApiOkResponse({ type: CustomersDto })
+  @Authorized('ADMIN', 'MANAGER')
+  createCustomer(
+    @Body() customerData: CreateCustomerDto,
+    @Request() req: RequestWithUser,
+  ) {
+    if (!req.organization) {
+      throw new ForbiddenException('Organization context is missing');
+    }
+
+    return this.customerService.createCustomer({
+      organizationId: req.organization?.organizationId,
+      customerData,
+    });
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update Individual Customer' })
+  @ApiOkResponse({ type: CustomersDto })
+  @Authorized('ADMIN', 'MANAGER')
+  updateCustomer(
+    @Param('id') id: string,
+    @Body() customerData: UpdateCustomerDto,
+    @Request() req: RequestWithUser,
+  ) {
+    if (!req.organization) {
+      throw new ForbiddenException('Organization context is missing');
+    }
+
+    return this.customerService.updateCustomer({
+      organizationId: req.organization?.organizationId,
+      customerId: id,
+      customerData,
+    });
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete Individual Customer' })
+  @ApiOkResponse({ type: CustomersDto })
+  @Authorized('ADMIN')
+  deleteCustomer(@Param('id') id: string, @Request() req: RequestWithUser) {
+    if (!req.organization) {
+      throw new ForbiddenException('Organization context is missing');
+    }
+
+    return this.customerService.deleteCustomer({
       organizationId: req.organization?.organizationId,
       customerId: id,
     });
