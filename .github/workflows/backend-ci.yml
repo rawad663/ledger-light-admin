@@ -46,6 +46,8 @@ jobs:
       # We need the prisma/generate folder to avoid linting errors
       - name: Generate Prisma client
         run: npm run prisma:generate
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/ci_placeholder?schema=public
 
       - name: Run ESLint
         run: npm run lint
