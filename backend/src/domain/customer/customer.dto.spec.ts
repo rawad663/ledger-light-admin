@@ -1,39 +1,9 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import {
-  CustomersDto,
-  GetCustomersQueryParamDto,
-  GetCustomersResponseDto,
-} from './customer.dto';
+import { CustomerDto, GetCustomersResponseDto } from './customer.dto';
 import { CustomerStatus } from '@prisma/generated/client';
 
-describe('GetCustomersQueryParamDto validation', () => {
-  it('applies defaults and accepts valid values', async () => {
-    const dto = plainToInstance(GetCustomersQueryParamDto, {});
-    const errors = await validate(dto);
-    expect(errors).toHaveLength(0);
-    expect(dto.limit).toBe(20);
-    expect(dto.sortOrder).toBe('desc');
-  });
-
-  it('rejects limit < 1 and > 100', async () => {
-    const low = plainToInstance(GetCustomersQueryParamDto, { limit: 0 });
-    const lowErrors = await validate(low);
-    expect(lowErrors.length).toBeGreaterThan(0);
-
-    const high = plainToInstance(GetCustomersQueryParamDto, { limit: 101 });
-    const highErrors = await validate(high);
-    expect(highErrors.length).toBeGreaterThan(0);
-  });
-
-  it('rejects invalid sortOrder', async () => {
-    const dto = plainToInstance(GetCustomersQueryParamDto, { sortOrder: 'up' });
-    const errors = await validate(dto);
-    expect(errors.length).toBeGreaterThan(0);
-  });
-});
-
-describe('CustomersDto validation', () => {
+describe('CustomerDto validation', () => {
   const valid = {
     id: 'a5b2b7f0-ec1b-4a0a-9e08-7e2dd6e7d5a0',
     organizationId: '0b5f7ae8-5835-4ef4-bfb7-7d1b2d8d9d1a',
@@ -47,7 +17,7 @@ describe('CustomersDto validation', () => {
   };
 
   it('accepts a valid customer', async () => {
-    const dto = plainToInstance(CustomersDto, valid);
+    const dto = plainToInstance(CustomerDto, valid);
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
   });
@@ -60,7 +30,7 @@ describe('CustomersDto validation', () => {
       createdAt: 'x',
       status: 'NOPE',
     };
-    const dto = plainToInstance(CustomersDto, bad);
+    const dto = plainToInstance(CustomerDto, bad);
     const errors = await validate(dto);
     expect(errors.length).toBe(4);
   });
