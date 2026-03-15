@@ -40,6 +40,9 @@ export class InventoryLevelDto {
 
   @IsDate()
   updatedAt: Date;
+
+  @IsDate()
+  createdAt: Date;
 }
 
 export class GetLevelsQueryDto extends PaginationOptionsQueryParamDto {

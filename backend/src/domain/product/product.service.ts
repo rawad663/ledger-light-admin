@@ -64,7 +64,7 @@ export class ProductService {
   async createProduct(
     organizationId: string,
     productData: CreateProductDto,
-    user?: UserWithMemberships,
+    actorUserId?: string,
   ) {
     const { inventory: inventoryData, ...rest } = productData;
     const product = await this.prismaService.product.create({
@@ -83,6 +83,7 @@ export class ProductService {
 
     if (inventoryData !== undefined) {
       const { locationId, quantity, note } = inventoryData;
+
       await this.prismaService.inventoryLevel.create({
         data: { locationId, quantity: 0, productId: product.id },
       });
@@ -90,7 +91,7 @@ export class ProductService {
       const { inventoryLevel: newIntentoryLevel, adjustment } =
         await this.inventoryService.createAdjustment({
           organizationId,
-          actorUserId: user?.id,
+          actorUserId,
           productId: product.id,
           locationId,
           delta: quantity,

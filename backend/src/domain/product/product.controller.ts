@@ -55,7 +55,7 @@ export class ProductController {
     return this.productService.createProduct(
       organization.organizationId,
       productData,
-      user,
+      user?.id,
     );
   }
 
