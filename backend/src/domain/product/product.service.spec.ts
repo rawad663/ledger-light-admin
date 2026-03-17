@@ -4,7 +4,6 @@ import { PrismaService } from '@src/infra/prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { NotFoundException } from '@nestjs/common';
 import { createPrismaMock } from '@src/test-utils/prisma.mock';
-import { UserWithMemberships } from '@src/domain/auth/strategies/jwt.strategy';
 
 describe('ProductService', () => {
   let service: ProductService;

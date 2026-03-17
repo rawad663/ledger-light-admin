@@ -7,7 +7,6 @@ import {
   UpdateProductDto,
 } from './product.dto';
 import { InventoryService } from '../inventory/inventory.service';
-import { type UserWithMemberships } from '../auth/strategies/jwt.strategy';
 import {
   InventoryAdjustment,
   InventoryLevel,
