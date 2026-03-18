@@ -36,7 +36,7 @@ async function bootstrap() {
     .build();
 
   /**
-   * Swagger docs available at http://localhost:8081/docs (or BACKEND_PORT/docs)
+   * Swagger docs available at http://localhost:8080/docs
    */
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
