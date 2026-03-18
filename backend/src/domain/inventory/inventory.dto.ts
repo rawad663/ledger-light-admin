@@ -16,6 +16,7 @@ import {
 } from '@src/common/dto/pagination.dto';
 import { ProductDto } from '@src/domain/product/product.dto';
 import { LocationDto } from '@src/domain/location/location.dto';
+import { InventoryAjustmentReason } from '@prisma/generated/enums';
 
 /**
  * Inventory Levels
@@ -147,7 +148,7 @@ export class InventoryAdjustmentDto {
 
   @IsString()
   @IsOptional()
-  reason?: string;
+  reason?: InventoryAjustmentReason;
 
   @IsString()
   @IsOptional()
