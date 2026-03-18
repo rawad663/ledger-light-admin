@@ -51,7 +51,11 @@ export const Authorized = (...roles: Role[]) =>
   applyDecorators(
     UseGuards(JwtAuthGuard, OrganizationContextGuard, RolesGuard),
     Roles(...roles),
-    ApiBearerAuth(),
+  );
+
+/** Doc-only: adds org header + common auth responses without guards */
+export const OrgContextDocs = () =>
+  applyDecorators(
     ApiHeader({
       name: 'X-Organization-Id',
       description:
@@ -60,6 +64,6 @@ export const Authorized = (...roles: Role[]) =>
     }),
     ApiResponse({ status: 401, description: 'Unauthorized' }),
     ApiForbiddenResponse({
-      description: 'Forbidden (missing role or org context)',
+      description: 'Forbidden (invalid/missing organization context)',
     }),
   );
