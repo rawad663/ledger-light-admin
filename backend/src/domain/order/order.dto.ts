@@ -125,6 +125,8 @@ export class CreateOrderItemDto extends OmitType(OrderItemDto, [
   'lineSubtotalCents',
   'lineTotalCents',
   'unitPriceCents',
+  'productName',
+  'sku',
 ]) {}
 
 export class CreateOrderDto extends PickType(OrderDto, [
