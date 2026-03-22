@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, OmitType, PickType } from '@nestjs/swagger';
@@ -43,18 +44,22 @@ export class OrderDto {
 
   @IsInt()
   @Type(() => Number)
+  @Min(0)
   subtotalCents: number;
 
   @IsInt()
   @Type(() => Number)
+  @Min(0)
   taxCents: number;
 
   @IsInt()
   @Type(() => Number)
+  @Min(0)
   discountCents: number;
 
   @IsInt()
   @Type(() => Number)
+  @Min(0)
   totalCents: number;
 
   @IsDate()
@@ -91,24 +96,29 @@ export class OrderItemDto {
 
   @IsInt()
   @Type(() => Number)
+  @Min(1)
   qty: number;
 
   @IsInt()
   @Type(() => Number)
+  @Min(0)
   unitPriceCents: number;
 
   @IsInt()
   @Type(() => Number)
+  @Min(0)
   lineSubtotalCents: number; // qty * unitPriceCents
 
   @IsInt()
   @Type(() => Number)
   @IsOptional()
+  @Min(0)
   discountCents: number = 0;
 
   @IsInt()
   @Type(() => Number)
   @IsOptional()
+  @Min(0)
   taxCents: number = 0;
 
   @IsInt()
@@ -154,6 +164,18 @@ export class GetOrdersQueryDto extends PaginationOptionsQueryParamDto {
   @ApiProperty({ enum: OrderStatus })
   status?: OrderStatus = undefined;
 
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === undefined) return false;
+    if (typeof value === 'boolean') return value;
+
+    return value === 'true';
+  })
+  @IsOptional()
+  withItems: boolean = false;
+}
+
+export class GetOrderQueryDto {
   @IsBoolean()
   @Transform(({ value }) => {
     if (value === undefined) return false;

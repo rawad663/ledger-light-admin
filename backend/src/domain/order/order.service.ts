@@ -6,6 +6,8 @@ import {
 import { PrismaService } from '@src/infra/prisma/prisma.service';
 import {
   CreateOrderDto,
+  CreateOrderItemDto,
+  GetOrderQueryDto,
   GetOrdersQueryDto,
   OrderDto,
   OrderItemDto,
@@ -14,7 +16,7 @@ import {
   UpdateOrderDto,
 } from './order.dto';
 import { OrderStatus } from '@prisma/generated/enums';
-import { Order, OrderItem, Prisma } from '@prisma/generated/client';
+import { Order, OrderItem } from '@prisma/generated/client';
 
 @Injectable()
 export class OrderService {
@@ -117,7 +119,11 @@ export class OrderService {
         });
 
         const createdItems = await tx.orderItem.createManyAndReturn({
-          data: computedLineItems.map((i) => ({ ...i, orderId: order.id })),
+          data: computedLineItems.map((i) => ({
+            ...i,
+            orderId: order.id,
+            organizationId: orgId,
+          })),
         });
 
         return {
@@ -198,9 +204,10 @@ export class OrderService {
     )) as unknown as Order & { items: OrderItem[] };
   }
 
-  async getOrderById(orgId: string, orderId: string) {
+  async getOrderById(orgId: string, orderId: string, query: GetOrderQueryDto) {
     const order = await this.prismaService.order.findFirst({
       where: { id: orderId },
+      include: { items: query.withItems },
     });
 
     if (!order) {
@@ -252,5 +259,111 @@ export class OrderService {
     });
 
     return deletedOrder;
+  }
+
+  async addOrderItem(orgId: string, orderId: string, data: CreateOrderItemDto) {
+    return this.prismaService.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id_organizationId: { id: orderId, organizationId: orgId } },
+        select: { id: true, items: { select: { id: true, productId: true } } },
+      });
+      if (!order)
+        throw new NotFoundException('Order not found for organization');
+
+      const product = await tx.product.findFirst({
+        where: { id: data.productId },
+        select: { id: true, name: true, sku: true, priceCents: true },
+      });
+      if (!product) throw new BadRequestException('Invalid product');
+      if (
+        (order.items as Array<{ id: string; productId: string }>).some(
+          ({ productId }) => productId === product.id,
+        )
+      ) {
+        throw new BadRequestException(
+          'Product already exist in order, update it instead',
+        );
+      }
+
+      const qty = data.qty ?? 0;
+      const discountCents = data.discountCents ?? 0;
+      const taxCents = data.taxCents ?? 0;
+
+      if (qty <= 0) throw new BadRequestException('Item qty must be > 0');
+      if (discountCents < 0 || taxCents < 0)
+        throw new BadRequestException('Cents must be non-negative');
+
+      const lineSubtotalCents = qty * product.priceCents;
+      if (discountCents > lineSubtotalCents)
+        throw new BadRequestException('Discount exceeds line subtotal');
+      const lineTotalCents = lineSubtotalCents - discountCents + taxCents;
+
+      const updated = await tx.order.update({
+        where: { id_organizationId: { id: orderId, organizationId: orgId } },
+        data: {
+          items: {
+            create: {
+              productId: product.id,
+              productName: product.name,
+              sku: product.sku ?? undefined,
+              qty,
+              unitPriceCents: product.priceCents,
+              lineSubtotalCents,
+              discountCents,
+              taxCents,
+              lineTotalCents,
+            },
+          },
+          subtotalCents: { increment: lineSubtotalCents },
+          discountCents: { increment: discountCents },
+          taxCents: { increment: taxCents },
+          totalCents: { increment: lineTotalCents },
+        },
+        include: { items: true },
+      });
+
+      return updated;
+    });
+  }
+
+  async deleteOrderItem(orgId: string, orderId: string, itemId: string) {
+    return this.prismaService.$transaction(async (tx) => {
+      const item = await tx.orderItem.findFirst({
+        where: {
+          id: itemId,
+          orderId,
+          organizationId: orgId,
+        },
+        select: {
+          id: true,
+          lineSubtotalCents: true,
+          discountCents: true,
+          taxCents: true,
+          lineTotalCents: true,
+        },
+      });
+      if (!item) throw new NotFoundException('Order item not found');
+
+      // Optional: prevent removing the last item
+      const count = await tx.orderItem.count({
+        where: { orderId, organizationId: orgId },
+      });
+      if (count <= 1)
+        throw new BadRequestException('Order must have at least one item');
+
+      const updated = await tx.order.update({
+        where: { id_organizationId: { id: orderId, organizationId: orgId } },
+        data: {
+          items: { delete: { id: itemId } },
+          subtotalCents: { decrement: item.lineSubtotalCents },
+          discountCents: { decrement: item.discountCents },
+          taxCents: { decrement: item.taxCents },
+          totalCents: { decrement: item.lineTotalCents },
+        },
+        include: { items: true },
+      });
+
+      return updated;
+    });
   }
 }

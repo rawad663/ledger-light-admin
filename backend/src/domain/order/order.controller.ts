@@ -20,6 +20,8 @@ import {
 } from '@src/common/decorators/current-org.decorator';
 import {
   CreateOrderDto,
+  CreateOrderItemDto,
+  GetOrderQueryDto,
   GetOrdersQueryDto,
   OrderDto,
   OrderWithItemsDto,
@@ -99,9 +101,16 @@ export class OrderController {
     description: 'Get an Order by ID',
     params: [{ name: 'id', type: String, in: 'path' }],
     ok: OrderDto,
+    queries: [
+      { name: 'withItems', description: 'Include Order Items', type: Boolean },
+    ],
   })
-  getOrder(@CurrentOrganization() org: CurrentOrg, @Param('id') id: string) {
-    return this.orderService.getOrderById(org.organizationId, id);
+  getOrder(
+    @CurrentOrganization() org: CurrentOrg,
+    @Param('id') id: string,
+    @Query() query: GetOrderQueryDto,
+  ) {
+    return this.orderService.getOrderById(org.organizationId, id, query);
   }
 
   @Patch(':id')
@@ -138,19 +147,46 @@ export class OrderController {
 
   @Post(':id/items')
   @Authorized('ADMIN', 'MANAGER')
-  createOrderItem(@Param('id') id: string) {
-    return 'creating order item with id ' + id;
-  }
-
-  @Patch(':id/items/:itemId')
-  @Authorized('ADMIN', 'MANAGER')
-  updateOrderItem(@Param('id') id: string, @Param('itemId') itemId: string) {
-    return `updating item with id ${id} and itemId ${itemId}`;
+  @ApiDoc({
+    summary: 'Add item to an order',
+    description: 'Adds a new item to an existing order',
+    ok: OrderWithItemsDto,
+    body: CreateOrderItemDto,
+    params: [{ name: 'id', type: String, in: 'path', description: 'Order ID' }],
+  })
+  addOrderItem(
+    @CurrentOrganization() org: CurrentOrg,
+    @Param('id') orderId: string,
+    @Body() data: CreateOrderItemDto,
+  ) {
+    return this.orderService.addOrderItem(org.organizationId, orderId, data);
   }
 
   @Delete(':id/items/:itemId')
   @Authorized('ADMIN')
-  deleteOrderItem(@Param('id') id: string, @Param('itemId') itemId: string) {
-    return `deleting item with id ${id} and itemId ${itemId}`;
+  @ApiDoc({
+    summary: 'Add item to an order',
+    description: 'Adds a new item to an existing order',
+    ok: OrderWithItemsDto,
+    params: [
+      { name: 'id', type: String, in: 'path', description: 'Order ID' },
+      {
+        name: 'itemId',
+        type: String,
+        in: 'path',
+        description: 'Order Item ID',
+      },
+    ],
+  })
+  deleteOrderItem(
+    @CurrentOrganization() org: CurrentOrg,
+    @Param('id') orderId: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.orderService.deleteOrderItem(
+      org.organizationId,
+      orderId,
+      itemId,
+    );
   }
 }
