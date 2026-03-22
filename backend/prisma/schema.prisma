@@ -288,6 +288,7 @@ model OrderItem {
   id            String  @id @default(uuid())
   orderId       String
   productId     String
+  organizationId  String
 
   // We save them here to create a snapshot of the item when order is placed
   // If Product changes in the future we don't want it to change in the OrderItem
@@ -302,10 +303,10 @@ model OrderItem {
   taxCents         Int      @default(0)
   lineTotalCents   Int      @default(0) // lineSubtotalCents - discountCents + taxCents
 
-  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order         Order   @relation(fields: [orderId, organizationId], references: [id, organizationId], onDelete: Cascade)
   product       Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
-  @@index([orderId])
+  @@index([organizationId, orderId])
   @@index([productId])
 }
 
