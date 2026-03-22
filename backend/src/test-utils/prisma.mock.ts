@@ -48,6 +48,15 @@ export const createPrismaMock = (tx?: Record<string, any>) => {
     },
     order: {
       create: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    orderItem: {
+      findFirst: jest.fn(),
+      count: jest.fn(),
+      createManyAndReturn: jest.fn(),
     },
     location: {
       findFirst: jest.fn(),
