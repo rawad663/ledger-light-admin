@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import createClient from "openapi-fetch";
 import type { PathsWithMethod } from "openapi-typescript-helpers";
-import { AUTH_HEADER_COOKIE_MAP, type ApiPaths } from "@/lib/api-config";
+import { AUTH_COOKIE_MAP, type ApiPaths } from "@/lib/api-config";
 import { useCookies } from "./use-cookies";
 
 type ApiClient = ReturnType<typeof createClient<ApiPaths>>;
@@ -20,8 +20,8 @@ type ResponseData<Op> = Op extends {
 
 export function useApiClient() {
   const { getCookie } = useCookies();
-  const token = getCookie(AUTH_HEADER_COOKIE_MAP.ACCESS_TOKEN);
-  const orgId = getCookie(AUTH_HEADER_COOKIE_MAP.X_ORGANIZATION_ID);
+  const token = getCookie(AUTH_COOKIE_MAP.ACCESS_TOKEN);
+  const orgId = getCookie(AUTH_COOKIE_MAP.X_ORGANIZATION_ID);
 
   return useMemo(
     () =>
