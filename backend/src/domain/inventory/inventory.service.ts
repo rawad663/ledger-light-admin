@@ -4,56 +4,70 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
+import { PaginationOptionsQueryParamDto } from '@src/common/dto/pagination.dto';
 import {
   CreateAdjustmentBodyDto,
   CreateInventoryLevelDto,
+  GetAggregatedInventoryResponseDto,
   GetInventoryLevelsResponseDto,
   GetLevelsQueryDto,
   UpdateInventoryLevelDto,
 } from './inventory.dto';
-import { InventoryLevel, Location, Product } from '@prisma/generated/client';
+import {
+  InventoryLevel,
+  Location,
+  Prisma,
+  Product,
+} from '@prisma/generated/client';
 
 @Injectable()
 export class InventoryService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getInventory(organizationId: string) {
-    const productWithInventory = await this.prismaService.product.findMany({
-      where: { organizationId },
-      include: { inventoryLevels: true },
-    });
-
-    const aggregateByProduct = productWithInventory.reduce(
-      (acc, currentProduct) => {
-        const levels = currentProduct.inventoryLevels;
-        const aggregate = levels.reduce(
-          (a, c) => {
-            return {
-              totalQuantity: a.totalQuantity + c.quantity,
-              locations: [
-                ...a.locations,
-                { locationId: c.locationId, quantity: c.quantity },
-              ],
-            };
-          },
-          { totalQuantity: 0, locations: [] },
-        );
-
-        return [
-          ...acc,
-          {
-            productId: currentProduct.id,
-            name: currentProduct.name,
-            sku: currentProduct.sku,
-            totalQuantity: aggregate.totalQuantity,
-            locations: aggregate.locations,
-          },
-        ];
+  async getInventory(
+    organizationId: string,
+    query: PaginationOptionsQueryParamDto,
+  ): Promise<GetAggregatedInventoryResponseDto> {
+    const products = await this.prismaService.paginateMany(
+      this.prismaService.product,
+      {
+        where: { organizationId },
+        include: { inventoryLevels: true },
       },
-      [],
+      {
+        limit: query.limit,
+        cursor: query.cursor,
+        orderBy: query.sortBy
+          ? { [query.sortBy]: query.sortOrder || 'desc' }
+          : { name: 'asc' },
+      },
     );
 
-    return aggregateByProduct;
+    const data = products.map((product) => {
+      const levels = (
+        product as Product & { inventoryLevels: InventoryLevel[] }
+      ).inventoryLevels;
+      const totalQuantity = levels.reduce((sum, l) => sum + l.quantity, 0);
+      return {
+        productId: product.id,
+        name: product.name,
+        sku: product.sku,
+        totalQuantity,
+        locations: levels.map((l) => ({
+          locationId: l.locationId,
+          quantity: l.quantity,
+        })),
+      };
+    });
+
+    return {
+      data,
+      totalCount: data.length,
+      nextCursor:
+        products.length === query.limit
+          ? products[products.length - 1].id
+          : undefined,
+    };
   }
 
   async getLevels(
@@ -97,13 +111,24 @@ export class InventoryService {
       actorUserId?: string;
     },
   ) {
-    let inventoryLevel = await this.prismaService.inventoryLevel.findFirst({
+    return this.prismaService.$transaction((tx) =>
+      this.createAdjustmentWithTx(tx, data),
+    );
+  }
+
+  async createAdjustmentWithTx(
+    tx: Prisma.TransactionClient,
+    data: CreateAdjustmentBodyDto & {
+      organizationId: string;
+      actorUserId?: string;
+    },
+  ) {
+    let inventoryLevel = await tx.inventoryLevel.findFirst({
       where: { productId: data.productId, locationId: data.locationId },
     });
 
     if (!inventoryLevel) {
-      // Create it
-      inventoryLevel = await this.prismaService.inventoryLevel.create({
+      inventoryLevel = await tx.inventoryLevel.create({
         data: {
           productId: data.productId,
           locationId: data.locationId,
@@ -120,18 +145,17 @@ export class InventoryService {
       );
     }
 
-    // We update the inventoryLevel we found with the delta requested
-    const newIntentoryLevel = await this.prismaService.inventoryLevel.update({
+    const newInventoryLevel = await tx.inventoryLevel.update({
       where: { id: inventoryLevel.id },
       data: { quantity: newQuantity },
     });
 
-    const adjustment = await this.prismaService.inventoryAdjustment.create({
+    const adjustment = await tx.inventoryAdjustment.create({
       data,
     });
 
     return {
-      inventoryLevel: newIntentoryLevel,
+      inventoryLevel: newInventoryLevel,
       adjustment,
     };
   }

@@ -2,23 +2,10 @@ import { PrismaService } from '@src/infra/prisma/prisma.service';
 
 // Partial mock of PrismaService tailored for unit tests
 export const createPrismaMock = (tx?: Record<string, any>) => {
-  const prisma = {
+  const prisma: any = {
     // Query helpers
     paginateMany: jest.fn(),
     $queryRaw: jest.fn(),
-    $transaction: jest.fn(async (arg) => {
-      // interactive transaction: prisma.$transaction(async (tx) => { ... })
-      if (typeof arg === 'function') {
-        return (arg as (tx: any) => void)(tx);
-      }
-
-      // array transaction: prisma.$transaction([ ... ])
-      if (Array.isArray(arg)) {
-        return Promise.all(arg);
-      }
-
-      throw new Error('Unsupported $transaction mock usage');
-    }),
 
     // Models used across services
     customer: {
@@ -74,7 +61,19 @@ export const createPrismaMock = (tx?: Record<string, any>) => {
       findMany: jest.fn(),
       updateMany: jest.fn(),
     },
-  } as unknown as jest.Mocked<PrismaService>;
+  };
 
-  return prisma;
+  // Set up $transaction after prisma is defined so it can pass itself as the tx client
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  prisma.$transaction = jest.fn(async (arg: unknown) => {
+    if (typeof arg === 'function') {
+      return (arg as (client: any) => unknown)(tx ?? prisma);
+    }
+    if (Array.isArray(arg)) {
+      return Promise.all(arg);
+    }
+    throw new Error('Unsupported $transaction mock usage');
+  });
+
+  return prisma as unknown as jest.Mocked<PrismaService>;
 };

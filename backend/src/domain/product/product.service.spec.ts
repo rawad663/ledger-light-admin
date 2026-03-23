@@ -8,11 +8,17 @@ import { createPrismaMock } from '@src/test-utils/prisma.mock';
 describe('ProductService', () => {
   let service: ProductService;
   let prisma: jest.Mocked<PrismaService>;
-  let inventoryService: { createAdjustment: jest.Mock };
+  let inventoryService: {
+    createAdjustment: jest.Mock;
+    createAdjustmentWithTx: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = createPrismaMock();
-    inventoryService = { createAdjustment: jest.fn() };
+    inventoryService = {
+      createAdjustment: jest.fn(),
+      createAdjustmentWithTx: jest.fn(),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -112,7 +118,6 @@ describe('ProductService', () => {
     });
 
     it('creates a product with inventory and associated adjustment', async () => {
-      // Define data
       const organizationId = 'org-1';
       const actorUserId = 'usr-1';
       const locationId = 'loc-1';
@@ -125,12 +130,12 @@ describe('ProductService', () => {
         priceCents: 1000,
       };
 
-      // Define created objects
       const createdProduct = { id: productId, active: true, ...productBody };
       const createdInventoryLevel = {
         id: 'il1',
         productId: createdProduct.id,
-        ...inventoryBody,
+        locationId,
+        quantity: inventoryBody.quantity,
       };
       const createdAdjustment = {
         id: 'adj-1',
@@ -139,12 +144,11 @@ describe('ProductService', () => {
         productId,
         organizationId,
         delta: inventoryBody.quantity,
-        reason: 'Initial stock creation',
+        reason: 'INITIAL_STOCK',
       };
 
-      // Setup mocks
       (prisma.product.create as jest.Mock).mockResolvedValue(createdProduct);
-      inventoryService.createAdjustment.mockResolvedValue({
+      inventoryService.createAdjustmentWithTx.mockResolvedValue({
         inventoryLevel: createdInventoryLevel,
         adjustment: createdAdjustment,
       });
@@ -159,6 +163,17 @@ describe('ProductService', () => {
         actorUserId,
       );
 
+      expect(inventoryService.createAdjustmentWithTx).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          organizationId,
+          actorUserId,
+          productId,
+          locationId,
+          delta: inventoryBody.quantity,
+          reason: 'INITIAL_STOCK',
+        },
+      );
       expect(res).toEqual({
         product: createdProduct,
         inventoryLevel: createdInventoryLevel,

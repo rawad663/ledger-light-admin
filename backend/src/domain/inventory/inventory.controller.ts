@@ -9,10 +9,11 @@ import {
   type CurrentOrg,
 } from '@src/common/decorators/current-org.decorator';
 import { InventoryService } from './inventory.service';
+import { PaginationOptionsQueryParamDto } from '@src/common/dto/pagination.dto';
 import {
-  AggregatedInventoryItemDto,
   CreateAdjustmentBodyDto,
   CreateAdjustmentResponseDto,
+  GetAggregatedInventoryResponseDto,
   GetInventoryLevelsResponseDto,
   GetLevelsQueryDto,
 } from './inventory.dto';
@@ -33,11 +34,15 @@ export class InventoryController {
   @ApiDoc({
     summary: 'Get aggregated inventory',
     description:
-      'Returns total quantity per product and breakdown by locations for the active organization.',
-    ok: [AggregatedInventoryItemDto],
+      'Returns paginated total quantity per product and breakdown by locations for the active organization.',
+    ok: GetAggregatedInventoryResponseDto,
+    queries: appendToPaginationQuery([]),
   })
-  getInventory(@CurrentOrganization() org: CurrentOrg) {
-    return this.inventoryService.getInventory(org.organizationId);
+  getInventory(
+    @CurrentOrganization() org: CurrentOrg,
+    @Query() query: PaginationOptionsQueryParamDto,
+  ) {
+    return this.inventoryService.getInventory(org.organizationId, query);
   }
 
   @Get('levels')
