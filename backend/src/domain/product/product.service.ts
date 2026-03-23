@@ -66,39 +66,42 @@ export class ProductService {
     actorUserId?: string,
   ) {
     const { inventory: inventoryData, ...rest } = productData;
-    const product = await this.prismaService.product.create({
-      data: {
-        ...rest,
-        active: true,
-        organizationId,
-      },
-    });
 
-    const result: {
-      product: Product;
-      inventoryLevel?: InventoryLevel;
-      adjustment?: InventoryAdjustment;
-    } = { product };
-
-    if (inventoryData !== undefined) {
-      const { locationId, quantity, note } = inventoryData;
-
-      const { inventoryLevel: newIntentoryLevel, adjustment } =
-        await this.inventoryService.createAdjustment({
+    return this.prismaService.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: {
+          ...rest,
+          active: true,
           organizationId,
-          actorUserId,
-          productId: product.id,
-          locationId,
-          delta: quantity,
-          reason: 'INITIAL_STOCK',
-          note,
-        });
+        },
+      });
 
-      result.inventoryLevel = newIntentoryLevel;
-      result.adjustment = adjustment;
-    }
+      const result: {
+        product: Product;
+        inventoryLevel?: InventoryLevel;
+        adjustment?: InventoryAdjustment;
+      } = { product };
 
-    return result;
+      if (inventoryData !== undefined) {
+        const { locationId, quantity, note } = inventoryData;
+
+        const { inventoryLevel, adjustment } =
+          await this.inventoryService.createAdjustmentWithTx(tx, {
+            organizationId,
+            actorUserId,
+            productId: product.id,
+            locationId,
+            delta: quantity,
+            reason: 'INITIAL_STOCK',
+            note,
+          });
+
+        result.inventoryLevel = inventoryLevel;
+        result.adjustment = adjustment;
+      }
+
+      return result;
+    });
   }
 
   async updateProduct(

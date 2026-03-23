@@ -118,6 +118,10 @@ export class AggregatedInventoryItemDto {
   locations: AggregatedInventoryLocationDto[];
 }
 
+export class GetAggregatedInventoryResponseDto extends createPaginatedResponseDto(
+  AggregatedInventoryItemDto,
+) {}
+
 /**
  * Inventory Adjustments
  */

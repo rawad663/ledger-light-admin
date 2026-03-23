@@ -47,26 +47,34 @@ describe('InventoryController', () => {
   describe('getInventory', () => {
     it('calls the service to aggregate inventory and return result', async () => {
       const org = { organizationId: 'org-1', role: 'ADMIN' };
-      const result = [
-        {
-          productId: '08395fd2-43b1-49b7-97ec-57c4f63194cb',
-          name: 'Product X',
-          sku: 'PROD-X',
-          totalQuantity: 950,
-          locations: [
-            {
-              locationId: 'loc-1',
-              quantity: 950,
-            },
-          ],
-        },
-      ];
+      const query = { limit: 20 } as any;
+      const result = {
+        data: [
+          {
+            productId: '08395fd2-43b1-49b7-97ec-57c4f63194cb',
+            name: 'Product X',
+            sku: 'PROD-X',
+            totalQuantity: 950,
+            locations: [
+              {
+                locationId: 'loc-1',
+                quantity: 950,
+              },
+            ],
+          },
+        ],
+        totalCount: 1,
+        nextCursor: undefined,
+      };
 
-      service.getInventory.mockResolvedValue(result);
+      service.getInventory.mockResolvedValue(result as any);
 
-      const res = await controller.getInventory(org);
+      const res = await controller.getInventory(org, query);
 
-      expect(service.getInventory).toHaveBeenCalledWith(org.organizationId);
+      expect(service.getInventory).toHaveBeenCalledWith(
+        org.organizationId,
+        query,
+      );
       expect(res).toBe(result);
     });
   });
