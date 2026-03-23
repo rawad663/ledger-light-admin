@@ -18,10 +18,10 @@
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "noImplicitThis": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictBindCallApply": true,
+    "noFallthroughCasesInSwitch": true,
     "paths": {
       "@prisma/*": ["prisma/*"],
       "@src/*": ["src/*"]

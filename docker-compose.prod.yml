@@ -1,0 +1,7 @@
+services:
+  backend:
+    build:
+      target: production
+    environment:
+      NODE_ENV: production
+    restart: always
