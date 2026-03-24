@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Search,
   Download,
@@ -10,16 +10,15 @@ import {
   ChevronRight,
   Mail,
   Phone,
-  X,
   ShoppingBag,
   DollarSign,
   Calendar,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -27,23 +26,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
-import { Card, CardContent } from "@/components/ui/card"
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 
 const customers = [
   {
@@ -104,7 +103,12 @@ const customers = [
     initials: "DC",
     joinedDate: "Jun 3, 2025",
     recentOrders: [
-      { id: "ORD-7818", date: "Mar 23, 2026", total: 156.0, status: "Cancelled" },
+      {
+        id: "ORD-7818",
+        date: "Mar 23, 2026",
+        total: 156.0,
+        status: "Cancelled",
+      },
       { id: "ORD-7456", date: "Jan 22, 2026", total: 89.99, status: "Placed" },
     ],
   },
@@ -177,7 +181,12 @@ const customers = [
     initials: "AF",
     joinedDate: "Apr 20, 2024",
     recentOrders: [
-      { id: "ORD-7813", date: "Mar 22, 2026", total: 234.25, status: "Cancelled" },
+      {
+        id: "ORD-7813",
+        date: "Mar 22, 2026",
+        total: 234.25,
+        status: "Cancelled",
+      },
       { id: "ORD-7678", date: "Mar 8, 2026", total: 156.0, status: "Placed" },
     ],
   },
@@ -196,25 +205,27 @@ const customers = [
       { id: "ORD-7756", date: "Mar 21, 2026", total: 289.0, status: "Placed" },
     ],
   },
-]
+];
 
 const statusColors: Record<string, string> = {
   Pending: "text-warning-foreground",
   Placed: "text-success",
   Cancelled: "text-destructive",
-}
+};
 
 export function CustomersPage() {
-  const [search, setSearch] = React.useState("")
-  const [selectedCustomer, setSelectedCustomer] = React.useState<typeof customers[0] | null>(null)
+  const [search, setSearch] = React.useState("");
+  const [selectedCustomer, setSelectedCustomer] = React.useState<
+    (typeof customers)[0] | null
+  >(null);
 
   const filteredCustomers = customers.filter((customer) => {
     return (
       customer.name.toLowerCase().includes(search.toLowerCase()) ||
       customer.email.toLowerCase().includes(search.toLowerCase()) ||
       customer.phone.includes(search)
-    )
-  })
+    );
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -271,7 +282,11 @@ export function CustomersPage() {
                 <TableCell colSpan={7} className="h-32 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-muted-foreground">No customers found</p>
-                    <Button variant="outline" size="sm" onClick={() => setSearch("")}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSearch("")}
+                    >
                       Clear search
                     </Button>
                   </div>
@@ -295,16 +310,30 @@ export function CustomersPage() {
                       <span className="font-medium">{customer.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{customer.email}</TableCell>
-                  <TableCell className="text-muted-foreground">{customer.phone}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    ${customer.lifetimeSpend.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  <TableCell className="text-muted-foreground">
+                    {customer.email}
                   </TableCell>
-                  <TableCell className="text-center">{customer.ordersCount}</TableCell>
-                  <TableCell className="text-muted-foreground">{customer.lastOrderDate}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {customer.phone}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    $
+                    {customer.lifetimeSpend.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {customer.ordersCount}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {customer.lastOrderDate}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuTrigger
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant="ghost"
                           size="icon"
@@ -315,13 +344,17 @@ export function CustomersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelectedCustomer(customer)}>
+                        <DropdownMenuItem
+                          onClick={() => setSelectedCustomer(customer)}
+                        >
                           View profile
                         </DropdownMenuItem>
                         <DropdownMenuItem>Edit customer</DropdownMenuItem>
                         <DropdownMenuItem>Create order</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">Delete customer</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">
+                          Delete customer
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -334,7 +367,8 @@ export function CustomersPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between border-t px-4 py-3">
           <p className="text-sm text-muted-foreground">
-            Showing <span className="font-medium">{filteredCustomers.length}</span> of{" "}
+            Showing{" "}
+            <span className="font-medium">{filteredCustomers.length}</span> of{" "}
             <span className="font-medium">{customers.length}</span> customers
           </p>
           <div className="flex items-center gap-2">
@@ -351,7 +385,10 @@ export function CustomersPage() {
       </div>
 
       {/* Customer Detail Side Panel */}
-      <Sheet open={!!selectedCustomer} onOpenChange={() => setSelectedCustomer(null)}>
+      <Sheet
+        open={!!selectedCustomer}
+        onOpenChange={() => setSelectedCustomer(null)}
+      >
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
           {selectedCustomer && (
             <>
@@ -364,8 +401,12 @@ export function CustomersPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <SheetTitle className="text-xl">{selectedCustomer.name}</SheetTitle>
-                    <SheetDescription>Customer since {selectedCustomer.joinedDate}</SheetDescription>
+                    <SheetTitle className="text-xl">
+                      {selectedCustomer.name}
+                    </SheetTitle>
+                    <SheetDescription>
+                      Customer since {selectedCustomer.joinedDate}
+                    </SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
@@ -373,11 +414,16 @@ export function CustomersPage() {
               <div className="space-y-6">
                 {/* Contact Info */}
                 <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Contact Information</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Contact Information
+                  </h4>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="size-4 text-muted-foreground" />
-                      <a href={`mailto:${selectedCustomer.email}`} className="text-primary hover:underline">
+                      <a
+                        href={`mailto:${selectedCustomer.email}`}
+                        className="text-primary hover:underline"
+                      >
                         {selectedCustomer.email}
                       </a>
                     </div>
@@ -396,25 +442,44 @@ export function CustomersPage() {
                     <CardContent className="p-3 text-center">
                       <DollarSign className="size-5 mx-auto text-muted-foreground mb-1" />
                       <p className="text-lg font-semibold">
-                        ${selectedCustomer.lifetimeSpend.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        $
+                        {selectedCustomer.lifetimeSpend.toLocaleString(
+                          "en-US",
+                          {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          },
+                        )}
                       </p>
-                      <p className="text-xs text-muted-foreground">Lifetime Spend</p>
+                      <p className="text-xs text-muted-foreground">
+                        Lifetime Spend
+                      </p>
                     </CardContent>
                   </Card>
                   <Card className="py-3">
                     <CardContent className="p-3 text-center">
                       <ShoppingBag className="size-5 mx-auto text-muted-foreground mb-1" />
-                      <p className="text-lg font-semibold">{selectedCustomer.ordersCount}</p>
-                      <p className="text-xs text-muted-foreground">Total Orders</p>
+                      <p className="text-lg font-semibold">
+                        {selectedCustomer.ordersCount}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Total Orders
+                      </p>
                     </CardContent>
                   </Card>
                   <Card className="py-3">
                     <CardContent className="p-3 text-center">
                       <Calendar className="size-5 mx-auto text-muted-foreground mb-1" />
                       <p className="text-lg font-semibold">
-                        ${(selectedCustomer.lifetimeSpend / selectedCustomer.ordersCount).toFixed(0)}
+                        $
+                        {(
+                          selectedCustomer.lifetimeSpend /
+                          selectedCustomer.ordersCount
+                        ).toFixed(0)}
                       </p>
-                      <p className="text-xs text-muted-foreground">Avg. Order</p>
+                      <p className="text-xs text-muted-foreground">
+                        Avg. Order
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -423,7 +488,9 @@ export function CustomersPage() {
 
                 {/* Recent Orders */}
                 <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Recent Orders</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Recent Orders
+                  </h4>
                   <div className="space-y-2">
                     {selectedCustomer.recentOrders.map((order) => (
                       <div
@@ -432,11 +499,20 @@ export function CustomersPage() {
                       >
                         <div>
                           <p className="font-medium text-sm">{order.id}</p>
-                          <p className="text-xs text-muted-foreground">{order.date}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.date}
+                          </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium text-sm">${order.total.toFixed(2)}</p>
-                          <p className={cn("text-xs font-medium", statusColors[order.status])}>
+                          <p className="font-medium text-sm">
+                            ${order.total.toFixed(2)}
+                          </p>
+                          <p
+                            className={cn(
+                              "text-xs font-medium",
+                              statusColors[order.status],
+                            )}
+                          >
                             {order.status}
                           </p>
                         </div>
@@ -450,9 +526,7 @@ export function CustomersPage() {
                   <Button className="flex-1" variant="outline">
                     Edit Customer
                   </Button>
-                  <Button className="flex-1">
-                    Create Order
-                  </Button>
+                  <Button className="flex-1">Create Order</Button>
                 </div>
               </div>
             </>
@@ -460,5 +534,5 @@ export function CustomersPage() {
         </SheetContent>
       </Sheet>
     </div>
-  )
+  );
 }

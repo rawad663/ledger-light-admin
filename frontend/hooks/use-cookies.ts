@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type CookieMap = Record<string, string>;
 
@@ -47,15 +47,13 @@ function buildCookieString(
 }
 
 export function useCookies() {
-  const [cookies, setCookies] = useState<Record<string, string>>({});
+  const [cookies, setCookies] = useState<Record<string, string>>(() =>
+    parseCookieString(document.cookie),
+  );
 
   const refreshCookies = () => {
     setCookies(parseCookieString(document.cookie));
   };
-
-  useEffect(() => {
-    refreshCookies();
-  }, []);
 
   const getCookie = (name: string) => cookies[name];
 

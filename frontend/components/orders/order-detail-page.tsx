@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
+import * as React from "react";
+import Link from "next/link";
 import {
   ArrowLeft,
   Printer,
@@ -14,13 +14,13 @@ import {
   Mail,
   Phone,
   Package,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -28,18 +28,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter,
-} from "@/components/ui/table"
+  // TableFooter,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 interface OrderDetailPageProps {
-  orderId: string
+  orderId: string;
 }
 
 // Mock order data
@@ -109,16 +109,16 @@ const orderData = {
       icon: Clock,
     },
   ],
-}
+};
 
 const statusColors: Record<string, string> = {
   Pending: "bg-warning/15 text-warning-foreground border-warning/30",
   Placed: "bg-success/15 text-success border-success/30",
   Cancelled: "bg-destructive/15 text-destructive border-destructive/30",
-}
+};
 
-export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
-  const order = orderData
+export function OrderDetailPage(_: OrderDetailPageProps) {
+  const order = orderData;
 
   return (
     <div className="p-6 space-y-6">
@@ -133,7 +133,9 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight">{order.id}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {order.id}
+              </h1>
               <Badge
                 variant="outline"
                 className={cn("font-medium", statusColors[order.status])}
@@ -171,7 +173,9 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
               <DropdownMenuItem>Duplicate order</DropdownMenuItem>
               <DropdownMenuItem>Send invoice</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">Delete order</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive">
+                Delete order
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -196,26 +200,38 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
                     <TableHead className="text-right">Unit Price</TableHead>
                     <TableHead className="text-right">Discount</TableHead>
                     <TableHead className="text-right">Tax</TableHead>
-                    <TableHead className="text-right pr-6">Line Total</TableHead>
+                    <TableHead className="text-right pr-6">
+                      Line Total
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {order.items.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="pl-6 font-medium">{item.name}</TableCell>
+                      <TableCell className="pl-6 font-medium">
+                        {item.name}
+                      </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {item.sku}
                       </TableCell>
-                      <TableCell className="text-center">{item.quantity}</TableCell>
-                      <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
+                      <TableCell className="text-center">
+                        {item.quantity}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ${item.unitPrice.toFixed(2)}
+                      </TableCell>
                       <TableCell className="text-right">
                         {item.discount > 0 ? (
-                          <span className="text-destructive">-${item.discount.toFixed(2)}</span>
+                          <span className="text-destructive">
+                            -${item.discount.toFixed(2)}
+                          </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">${item.tax.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        ${item.tax.toFixed(2)}
+                      </TableCell>
                       <TableCell className="text-right pr-6 font-medium">
                         ${item.total.toFixed(2)}
                       </TableCell>
@@ -239,7 +255,9 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Discount</span>
-                  <span className="text-destructive">-${order.discount.toFixed(2)}</span>
+                  <span className="text-destructive">
+                    -${order.discount.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Tax</span>
@@ -275,7 +293,10 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="size-4 text-muted-foreground" />
-                  <a href={`mailto:${order.customer.email}`} className="text-primary hover:underline">
+                  <a
+                    href={`mailto:${order.customer.email}`}
+                    className="text-primary hover:underline"
+                  >
                     {order.customer.email}
                   </a>
                 </div>
@@ -326,8 +347,12 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
                     </div>
                     <div className="flex-1 pt-0.5">
                       <p className="text-sm font-medium">{event.action}</p>
-                      <p className="text-xs text-muted-foreground">{event.description}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{event.time}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {event.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {event.time}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -337,5 +362,5 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
+import * as React from "react";
+import Link from "next/link";
 import {
   DollarSign,
   ShoppingCart,
@@ -11,9 +11,8 @@ import {
   Package,
   ArrowUpRight,
   ArrowDownRight,
-  MoreHorizontal,
   TrendingUp,
-} from "lucide-react"
+} from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -22,12 +21,18 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-} from "recharts"
+} from "recharts";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -35,13 +40,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/table";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu"
 
 const salesData = [
   { date: "Mon", sales: 2400 },
@@ -51,7 +56,7 @@ const salesData = [
   { date: "Fri", sales: 4890 },
   { date: "Sat", sales: 5390 },
   { date: "Sun", sales: 3490 },
-]
+];
 
 const recentOrders = [
   {
@@ -94,7 +99,7 @@ const recentOrders = [
     total: "$328.75",
     time: "2 hr ago",
   },
-]
+];
 
 const lowStockItems = [
   {
@@ -121,13 +126,13 @@ const lowStockItems = [
     stock: 4,
     reorderPoint: 12,
   },
-]
+];
 
 const statusColors: Record<string, string> = {
   Pending: "bg-warning/15 text-warning-foreground border-warning/30",
   Placed: "bg-success/15 text-success border-success/30",
   Cancelled: "bg-destructive/15 text-destructive border-destructive/30",
-}
+};
 
 export function DashboardPage() {
   return (
@@ -159,7 +164,9 @@ export function DashboardPage() {
               <DollarSign className="size-6 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-muted-foreground">Today&apos;s Sales</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Today&apos;s Sales
+              </p>
               <div className="flex items-baseline gap-2">
                 <p className="text-2xl font-semibold">$4,285</p>
                 <span className="flex items-center text-xs font-medium text-success">
@@ -177,7 +184,9 @@ export function DashboardPage() {
               <ShoppingCart className="size-6 text-chart-2" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-muted-foreground">Orders Today</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Orders Today
+              </p>
               <div className="flex items-baseline gap-2">
                 <p className="text-2xl font-semibold">28</p>
                 <span className="flex items-center text-xs font-medium text-success">
@@ -195,12 +204,13 @@ export function DashboardPage() {
               <AlertTriangle className="size-6 text-warning" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-muted-foreground">Low Stock Items</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Low Stock Items
+              </p>
               <div className="flex items-baseline gap-2">
                 <p className="text-2xl font-semibold">12</p>
                 <span className="flex items-center text-xs font-medium text-destructive">
-                  <ArrowDownRight className="size-3" />
-                  3
+                  <ArrowDownRight className="size-3" />3
                 </span>
               </div>
             </div>
@@ -213,7 +223,9 @@ export function DashboardPage() {
               <Users className="size-6 text-chart-5" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-muted-foreground">Active Customers</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Active Customers
+              </p>
               <div className="flex items-baseline gap-2">
                 <p className="text-2xl font-semibold">1,284</p>
                 <span className="flex items-center text-xs font-medium text-success">
@@ -234,7 +246,9 @@ export function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base">Sales Overview</CardTitle>
-                <CardDescription>This week&apos;s sales performance</CardDescription>
+                <CardDescription>
+                  This week&apos;s sales performance
+                </CardDescription>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <TrendingUp className="size-4 text-success" />
@@ -246,24 +260,51 @@ export function DashboardPage() {
           <CardContent>
             <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart
+                  data={salesData}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
                   <defs>
-                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
+                    <linearGradient
+                      id="salesGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="var(--color-primary)"
+                        stopOpacity={0.15}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="var(--color-primary)"
+                        stopOpacity={0}
+                      />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--color-border)"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="date"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
+                    tick={{
+                      fill: "var(--color-muted-foreground)",
+                      fontSize: 12,
+                    }}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
+                    tick={{
+                      fill: "var(--color-muted-foreground)",
+                      fontSize: 12,
+                    }}
                     tickFormatter={(value) => `$${value}`}
                   />
                   <Tooltip
@@ -273,7 +314,10 @@ export function DashboardPage() {
                       borderRadius: "8px",
                       fontSize: 12,
                     }}
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, "Sales"]}
+                    formatter={(value: number) => [
+                      `$${value.toLocaleString()}`,
+                      "Sales",
+                    ]}
                   />
                   <Area
                     type="monotone"
@@ -295,36 +339,54 @@ export function DashboardPage() {
             <CardDescription>Common tasks and shortcuts</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2">
-            <Button variant="outline" className="h-auto justify-start gap-3 px-3 py-3" asChild>
+            <Button
+              variant="outline"
+              className="h-auto justify-start gap-3 px-3 py-3"
+              asChild
+            >
               <Link href="/orders/new">
                 <div className="flex size-9 items-center justify-center rounded-md bg-primary/10">
                   <ShoppingCart className="size-4 text-primary" />
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="font-medium">Create Order</span>
-                  <span className="text-xs text-muted-foreground">New sale or invoice</span>
+                  <span className="text-xs text-muted-foreground">
+                    New sale or invoice
+                  </span>
                 </div>
               </Link>
             </Button>
-            <Button variant="outline" className="h-auto justify-start gap-3 px-3 py-3" asChild>
+            <Button
+              variant="outline"
+              className="h-auto justify-start gap-3 px-3 py-3"
+              asChild
+            >
               <Link href="/products/new">
                 <div className="flex size-9 items-center justify-center rounded-md bg-chart-2/15">
                   <Package className="size-4 text-chart-2" />
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="font-medium">Add Product</span>
-                  <span className="text-xs text-muted-foreground">Create new listing</span>
+                  <span className="text-xs text-muted-foreground">
+                    Create new listing
+                  </span>
                 </div>
               </Link>
             </Button>
-            <Button variant="outline" className="h-auto justify-start gap-3 px-3 py-3" asChild>
+            <Button
+              variant="outline"
+              className="h-auto justify-start gap-3 px-3 py-3"
+              asChild
+            >
               <Link href="/inventory/adjust">
                 <div className="flex size-9 items-center justify-center rounded-md bg-warning/15">
                   <AlertTriangle className="size-4 text-warning" />
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="font-medium">Adjust Inventory</span>
-                  <span className="text-xs text-muted-foreground">Update stock levels</span>
+                  <span className="text-xs text-muted-foreground">
+                    Update stock levels
+                  </span>
                 </div>
               </Link>
             </Button>
@@ -340,7 +402,9 @@ export function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base">Recent Orders</CardTitle>
-                <CardDescription>Latest transactions from all locations</CardDescription>
+                <CardDescription>
+                  Latest transactions from all locations
+                </CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/orders">View all</Link>
@@ -363,19 +427,26 @@ export function DashboardPage() {
                     <TableCell className="pl-6">
                       <div>
                         <p className="font-medium">{order.id}</p>
-                        <p className="text-xs text-muted-foreground">{order.time}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {order.time}
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell>{order.customer}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={cn("font-medium", statusColors[order.status])}
+                        className={cn(
+                          "font-medium",
+                          statusColors[order.status],
+                        )}
                       >
                         {order.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right pr-6 font-medium">{order.total}</TableCell>
+                    <TableCell className="text-right pr-6 font-medium">
+                      {order.total}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -392,7 +463,9 @@ export function DashboardPage() {
                   <AlertTriangle className="size-4 text-warning" />
                   Low Stock Alert
                 </CardTitle>
-                <CardDescription>Products below reorder threshold</CardDescription>
+                <CardDescription>
+                  Products below reorder threshold
+                </CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/inventory?filter=low">View all</Link>
@@ -413,12 +486,19 @@ export function DashboardPage() {
                   <TableRow key={item.sku}>
                     <TableCell className="pl-6">
                       <div>
-                        <p className="font-medium truncate max-w-[200px]">{item.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
+                        <p className="font-medium truncate max-w-[200px]">
+                          {item.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {item.sku}
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                      <Badge
+                        variant="outline"
+                        className="bg-destructive/10 text-destructive border-destructive/20"
+                      >
                         {item.stock}
                       </Badge>
                     </TableCell>
@@ -433,5 +513,5 @@ export function DashboardPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

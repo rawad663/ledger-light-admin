@@ -4,9 +4,11 @@ import { createApi } from "@/lib/api";
 
 export default async function Products() {
   const api = await createApi();
-  const { data } = await api.GET("/products/{id}", {
-    params: { path: { id: "5" } },
-  });
+  const { data, error } = await api.GET("/products");
+
+  if (error) {
+    console.error(error);
+  }
 
   const products = data?.data ?? [];
 
@@ -15,7 +17,7 @@ export default async function Products() {
       <ProductsPage
         products={products.map((p) => ({
           ...p,
-          category: p.category ?? "Outerwear",
+          category: p.category ?? "-",
           stock: 12,
           inventory: "In Stock",
           price: p.priceCents / 100,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import createClient from "openapi-fetch";
 import type { PathsWithMethod } from "openapi-typescript-helpers";
-import { AUTH_HEADER_COOKIE_MAP, type ApiPaths } from "@/lib/api-config";
+import { AUTH_COOKIE_MAP, type ApiPaths } from "@/lib/api-config";
 import { useCookies } from "./use-cookies";
 
 type ApiClient = ReturnType<typeof createClient<ApiPaths>>;
@@ -18,41 +18,45 @@ type ResponseData<Op> = Op extends {
     ? D
     : unknown;
 
-export function useApiClient() {
+export function useApiClient(withAuthHeaders = true) {
   const { getCookie } = useCookies();
-  const token = getCookie(AUTH_HEADER_COOKIE_MAP.ACCESS_TOKEN);
-  const orgId = getCookie(AUTH_HEADER_COOKIE_MAP.X_ORGANIZATION_ID);
+  const token = getCookie(AUTH_COOKIE_MAP.ACCESS_TOKEN);
+  const orgId = getCookie(AUTH_COOKIE_MAP.X_ORGANIZATION_ID);
 
   return useMemo(
     () =>
       createClient<ApiPaths>({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          "X-Organization-Id": orgId ?? "",
-        },
+        headers: withAuthHeaders
+          ? {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              "X-Organization-Id": orgId ?? "",
+            }
+          : {},
       }),
-    [token, orgId],
+    [token, orgId, withAuthHeaders],
   );
 }
 
 // For reads (GET) — auto-fetches on mount/path change
-export function useGet<P extends GetPaths>(path: P | null) {
+export function useGet<P extends GetPaths>(
+  path: P | null,
+  withAuthHeaders: boolean = true,
+) {
   type Op = ApiPaths[P] extends { get: infer G } ? G : never;
   type Data = ResponseData<Op>;
 
-  const client = useApiClient();
+  const client = useApiClient(withAuthHeaders);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(!!path);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!path) return;
 
     let cancelled = false;
-    setLoading(true);
 
-    (client.GET as Function)(path)
+    (client.GET as any)(path)
       .then((result: { data?: Data; error?: unknown }) => {
         if (cancelled) return;
         if (result.error) {
@@ -77,8 +81,8 @@ export function useGet<P extends GetPaths>(path: P | null) {
 }
 
 // For mutations — manages loading/error state, delegates to client
-export function useMutation() {
-  const client = useApiClient();
+export function useMutation(withAuthHeaders: boolean = true) {
+  const client = useApiClient(withAuthHeaders);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
