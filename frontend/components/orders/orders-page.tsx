@@ -1,29 +1,28 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
+import * as React from "react";
+import Link from "next/link";
 import {
   Plus,
   Search,
-  Filter,
   Download,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   Calendar,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -31,14 +30,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 const orders = [
   {
@@ -141,28 +140,30 @@ const orders = [
     location: "Westside Mall",
     createdAt: "Mar 22, 2026 01:45 PM",
   },
-]
+];
 
 const statusColors: Record<string, string> = {
   Pending: "bg-warning/15 text-warning-foreground border-warning/30",
   Placed: "bg-success/15 text-success border-success/30",
   Cancelled: "bg-destructive/15 text-destructive border-destructive/30",
-}
+};
 
 export function OrdersPage() {
-  const [search, setSearch] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("all")
-  const [locationFilter, setLocationFilter] = React.useState("all")
+  const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState("all");
+  const [locationFilter, setLocationFilter] = React.useState("all");
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(search.toLowerCase()) ||
       order.customer.toLowerCase().includes(search.toLowerCase()) ||
-      order.email.toLowerCase().includes(search.toLowerCase())
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter
-    const matchesLocation = locationFilter === "all" || order.location === locationFilter
-    return matchesSearch && matchesStatus && matchesLocation
-  })
+      order.email.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || order.status === statusFilter;
+    const matchesLocation =
+      locationFilter === "all" || order.location === locationFilter;
+    return matchesSearch && matchesStatus && matchesLocation;
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -248,11 +249,15 @@ export function OrdersPage() {
                 <TableCell colSpan={8} className="h-32 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-muted-foreground">No orders found</p>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      setSearch("")
-                      setStatusFilter("all")
-                      setLocationFilter("all")
-                    }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearch("");
+                        setStatusFilter("all");
+                        setLocationFilter("all");
+                      }}
+                    >
                       Clear filters
                     </Button>
                   </div>
@@ -272,7 +277,9 @@ export function OrdersPage() {
                   <TableCell>
                     <div>
                       <p className="font-medium">{order.customer}</p>
-                      <p className="text-xs text-muted-foreground">{order.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {order.email}
+                      </p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -287,7 +294,9 @@ export function OrdersPage() {
                   <TableCell className="text-right font-medium">
                     ${order.total.toFixed(2)}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{order.location}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {order.location}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {order.createdAt}
                   </TableCell>
@@ -325,8 +334,8 @@ export function OrdersPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between border-t px-4 py-3">
           <p className="text-sm text-muted-foreground">
-            Showing <span className="font-medium">{filteredOrders.length}</span> of{" "}
-            <span className="font-medium">{orders.length}</span> orders
+            Showing <span className="font-medium">{filteredOrders.length}</span>{" "}
+            of <span className="font-medium">{orders.length}</span> orders
           </p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled>
@@ -341,5 +350,5 @@ export function OrdersPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
