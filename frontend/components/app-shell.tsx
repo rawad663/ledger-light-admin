@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import * as React from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -18,12 +18,12 @@ import {
   ChevronDown,
   ChevronsUpDown,
   Store,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +31,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -43,17 +43,36 @@ const navigation = [
   { name: "Team", href: "/team", icon: UserCog },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
-]
+];
 
 const organizations = [
   { id: "1", name: "Urban Outfitters Co.", logo: "UO" },
   { id: "2", name: "Downtown Retail", logo: "DR" },
   { id: "3", name: "Main St. Market", logo: "MS" },
-]
+];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const [currentOrg, setCurrentOrg] = React.useState(organizations[0])
+  const pathname = usePathname();
+  const router = useRouter();
+  const [currentOrg, setCurrentOrg] = React.useState(organizations[0]);
+
+  async function onSignOut() {
+    const res = await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error(body.message);
+      console.error(
+        "Failed to logout from server-side, clearing cookies anyway...",
+      );
+      return;
+    }
+
+    router.replace("/login");
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -74,7 +93,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <span className="text-sm font-medium truncate max-w-[140px]">
                     {currentOrg.name}
                   </span>
-                  <span className="text-xs text-muted-foreground">Business</span>
+                  <span className="text-xs text-muted-foreground">
+                    Business
+                  </span>
                 </div>
                 <ChevronsUpDown className="size-4 text-muted-foreground" />
               </Button>
@@ -107,8 +128,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto p-3">
           <ul className="flex flex-col gap-1">
             {navigation.map((item) => {
-              const isActive = pathname === item.href || 
-                (item.href !== "/" && pathname.startsWith(item.href))
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(item.href));
               return (
                 <li key={item.name}>
                   <Link
@@ -117,14 +139,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
                     )}
                   >
                     <item.icon className="size-4" />
                     {item.name}
                   </Link>
                 </li>
-              )
+              );
             })}
           </ul>
         </nav>
@@ -134,7 +156,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3 rounded-md px-2 py-1.5">
             <Avatar className="size-8">
               <AvatarImage src="/placeholder-avatar.jpg" alt="Sarah Chen" />
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">SC</AvatarFallback>
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                SC
+              </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">Sarah Chen</p>
@@ -168,8 +192,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2 px-2">
                   <Avatar className="size-7">
-                    <AvatarImage src="/placeholder-avatar.jpg" alt="Sarah Chen" />
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">SC</AvatarFallback>
+                    <AvatarImage
+                      src="/placeholder-avatar.jpg"
+                      alt="Sarah Chen"
+                    />
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      SC
+                    </AvatarFallback>
                   </Avatar>
                   <ChevronDown className="size-3 text-muted-foreground" />
                 </Button>
@@ -178,7 +207,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
                     <span>Sarah Chen</span>
-                    <span className="text-xs font-normal text-muted-foreground">sarah@urbanoutfitters.co</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      sarah@urbanoutfitters.co
+                    </span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -186,17 +217,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <DropdownMenuItem>Billing</DropdownMenuItem>
                 <DropdownMenuItem>Help & Support</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">Sign out</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={onSignOut}
+                  className="text-destructive"
+                >
+                  Sign out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+        <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
-  )
+  );
 }

@@ -1,6 +1,10 @@
-import { AppShell } from "@/components/app-shell";
+import { Suspense } from "react";
 import { LoginPage } from "@/components/login/login-page";
 
 export default function Login() {
-  return <LoginPage />;
+  return (
+    <Suspense>
+      <LoginPage />
+    </Suspense>
+  );
 }
