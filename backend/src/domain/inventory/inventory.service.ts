@@ -28,7 +28,7 @@ export class InventoryService {
     organizationId: string,
     query: PaginationOptionsQueryParamDto,
   ): Promise<GetAggregatedInventoryResponseDto> {
-    const products = await this.prismaService.paginateMany(
+    const { data: products, total } = await this.prismaService.paginateMany(
       this.prismaService.product,
       {
         where: { organizationId },
@@ -62,7 +62,7 @@ export class InventoryService {
 
     return {
       data,
-      totalCount: data.length,
+      totalCount: total,
       nextCursor:
         products.length === query.limit
           ? products[products.length - 1].id
@@ -73,7 +73,7 @@ export class InventoryService {
   async getLevels(
     query: GetLevelsQueryDto,
   ): Promise<GetInventoryLevelsResponseDto> {
-    const levels = (await this.prismaService.paginateMany(
+    const result = await this.prismaService.paginateMany(
       this.prismaService.inventoryLevel,
       {
         where: {
@@ -90,14 +90,16 @@ export class InventoryService {
           ? { [query.sortBy]: query.sortOrder || 'desc' }
           : { updatedAt: 'desc' },
       },
-    )) as (InventoryLevel & {
+    );
+
+    const levels = result.data as (InventoryLevel & {
       product: Product;
       location: Location;
     })[];
 
     return {
       data: levels,
-      totalCount: levels.length,
+      totalCount: result.total,
       nextCursor:
         levels.length === query.limit
           ? levels[levels.length - 1].id

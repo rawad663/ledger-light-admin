@@ -35,12 +35,19 @@ describe('ProductService', () => {
   });
 
   describe('getProducts', () => {
+    beforeEach(() => {
+      (prisma.product.findMany as jest.Mock).mockResolvedValue([
+        { category: 'Apparel' },
+        { category: 'Outerwear' },
+      ]);
+    });
+
     it('returns paginated results with nextCursor when full page and default sort', async () => {
       const items = [
         { id: '1', createdAt: new Date() },
         { id: '2', createdAt: new Date() },
       ] as any[];
-      prisma.paginateMany.mockResolvedValue(items);
+      prisma.paginateMany.mockResolvedValue({ data: items, total: 8 });
 
       const res = await service.getProducts('org-1', {
         limit: 2,
@@ -54,12 +61,17 @@ describe('ProductService', () => {
         { where: { organizationId: 'org-1' } },
         expect.objectContaining({ limit: 2, orderBy: { createdAt: 'desc' } }),
       );
-      expect(res).toEqual({ data: items, totalCount: 2, nextCursor: '2' });
+      expect(res).toEqual({
+        data: items,
+        totalCount: 8,
+        nextCursor: '2',
+        categories: ['Apparel', 'Outerwear'],
+      });
     });
 
     it('uses provided sort and omits nextCursor on last page', async () => {
       const items = [{ id: '1', createdAt: new Date() }] as any[];
-      prisma.paginateMany.mockResolvedValue(items);
+      prisma.paginateMany.mockResolvedValue({ data: items, total: 10 });
 
       const res = await service.getProducts('org-1', {
         limit: 2,
@@ -75,9 +87,53 @@ describe('ProductService', () => {
       );
       expect(res).toEqual({
         data: items,
-        totalCount: 1,
+        totalCount: 10,
         nextCursor: undefined,
+        categories: ['Apparel', 'Outerwear'],
       });
+    });
+
+    it('applies search filter to where clause', async () => {
+      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+
+      await service.getProducts('org-1', {
+        limit: 20,
+        search: 'widget',
+      } as any);
+
+      expect(prisma.paginateMany).toHaveBeenCalledWith(
+        prisma.product,
+        {
+          where: {
+            organizationId: 'org-1',
+            OR: [
+              { name: { contains: 'widget', mode: 'insensitive' } },
+              { sku: { contains: 'widget', mode: 'insensitive' } },
+            ],
+          },
+        },
+        expect.anything(),
+      );
+    });
+
+    it('applies category filter to where clause', async () => {
+      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+
+      await service.getProducts('org-1', {
+        limit: 20,
+        category: 'Apparel',
+      } as any);
+
+      expect(prisma.paginateMany).toHaveBeenCalledWith(
+        prisma.product,
+        {
+          where: {
+            organizationId: 'org-1',
+            category: 'Apparel',
+          },
+        },
+        expect.anything(),
+      );
     });
   });
 

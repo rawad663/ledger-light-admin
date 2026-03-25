@@ -2,9 +2,18 @@ import { AppShell } from "@/components/app-shell";
 import { ProductsPage } from "@/components/products/products-page";
 import { createApi } from "@/lib/api";
 
-export default async function Products() {
+export default async function Products({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; category?: string }>;
+}) {
+  const { search, category } = await searchParams;
   const api = await createApi();
-  const { data, error } = await api.GET("/products");
+  const { data, error } = await api.GET("/products", {
+    params: {
+      query: { limit: 50, search, category },
+    },
+  });
 
   if (error) {
     console.error(error);
@@ -15,13 +24,11 @@ export default async function Products() {
   return (
     <AppShell>
       <ProductsPage
-        products={products.map((p) => ({
-          ...p,
-          category: p.category ?? "-",
-          stock: 12,
-          inventory: "In Stock",
-          price: p.priceCents / 100,
-        }))}
+        products={products}
+        total={data?.totalCount ?? 0}
+        nextCursor={data?.nextCursor}
+        categories={data?.categories ?? []}
+        initialSearch={search ?? ""}
       />
     </AppShell>
   );

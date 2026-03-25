@@ -37,6 +37,7 @@ export class PrismaService
   async paginateMany<T, Y>(
     model: {
       findMany: (args: Y) => Promise<T[]>;
+      count: (...args: never[]) => Promise<number>;
     },
     query: Y,
     paginationOptions: {
@@ -45,16 +46,23 @@ export class PrismaService
       orderBy?: Record<string, 'asc' | 'desc'>;
     },
   ) {
-    const result = await model.findMany({
-      ...query,
-      take: paginationOptions.limit,
-      ...(paginationOptions.cursor && {
-        cursor: { id: paginationOptions.cursor },
-        skip: 1,
-      }),
-      orderBy: paginationOptions.orderBy || { createdAt: 'desc' },
-    });
+    const countFn = model.count as (arg: {
+      where?: unknown;
+    }) => Promise<number>;
 
-    return result;
+    const [data, total] = await Promise.all([
+      model.findMany({
+        ...query,
+        take: paginationOptions.limit,
+        ...(paginationOptions.cursor && {
+          cursor: { id: paginationOptions.cursor },
+          skip: 1,
+        }),
+        orderBy: paginationOptions.orderBy || { createdAt: 'desc' },
+      }),
+      countFn({ where: (query as { where?: unknown }).where }),
+    ]);
+
+    return { data, total };
   }
 }

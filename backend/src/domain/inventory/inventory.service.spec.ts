@@ -24,7 +24,10 @@ describe('InventoryService', () => {
 
   describe('getInventory', () => {
     it('finds all products by organization id and aggregates their inventory', async () => {
-      prisma.paginateMany.mockResolvedValue(productsWithInventory.slice(0, 2));
+      prisma.paginateMany.mockResolvedValue({
+        data: productsWithInventory.slice(0, 2),
+        total: 8,
+      });
 
       const query = {
         limit: 20,
@@ -65,7 +68,7 @@ describe('InventoryService', () => {
             ],
           },
         ],
-        totalCount: 2,
+        totalCount: 8,
         nextCursor: undefined,
       });
     });
@@ -77,7 +80,7 @@ describe('InventoryService', () => {
         { id: 'lvl-1', updatedAt: new Date() },
         { id: 'lvl-2', updatedAt: new Date() },
       ] as any[];
-      prisma.paginateMany.mockResolvedValue(items);
+      prisma.paginateMany.mockResolvedValue({ data: items, total: 8 });
 
       const res = await service.getLevels({
         limit: 2,
@@ -101,12 +104,12 @@ describe('InventoryService', () => {
         expect.objectContaining({ limit: 2, orderBy: { updatedAt: 'desc' } }),
       );
 
-      expect(res).toEqual({ data: items, totalCount: 2, nextCursor: 'lvl-2' });
+      expect(res).toEqual({ data: items, totalCount: 8, nextCursor: 'lvl-2' });
     });
 
     it('uses provided sort and cursor and omits nextCursor on last page', async () => {
       const items = [{ id: 'lvl-9', updatedAt: new Date() }] as any[];
-      prisma.paginateMany.mockResolvedValue(items);
+      prisma.paginateMany.mockResolvedValue({ data: items, total: 8 });
 
       const res = await service.getLevels({
         limit: 2,
@@ -128,7 +131,7 @@ describe('InventoryService', () => {
       );
       expect(res).toEqual({
         data: items,
-        totalCount: 1,
+        totalCount: 8,
         nextCursor: undefined,
       });
     });

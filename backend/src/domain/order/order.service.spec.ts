@@ -348,14 +348,16 @@ describe('OrderService', () => {
 
   describe('getOrders', () => {
     it('passes org, status filter, and pagination to paginateMany', async () => {
-      const paginatedResult = { data: [], meta: { total: 0 } };
-      (prisma.paginateMany as jest.Mock).mockResolvedValue(paginatedResult);
+      const items = [{ id: 'ord-1' }, { id: 'ord-2' }] as any[];
+      (prisma.paginateMany as jest.Mock).mockResolvedValue({
+        data: items,
+        total: 5,
+      });
 
       const query = {
         withItems: true,
         status: OrderStatus.PENDING,
-        page: 1,
-        pageSize: 10,
+        limit: 2,
         sortBy: 'createdAt',
         sortOrder: 'asc' as const,
       };
@@ -369,16 +371,22 @@ describe('OrderService', () => {
           include: { items: true },
         },
         expect.objectContaining({
-          page: 1,
-          pageSize: 10,
+          limit: 2,
           orderBy: { createdAt: 'asc' },
         }),
       );
-      expect(result).toEqual(paginatedResult);
+      expect(result).toEqual({
+        data: items,
+        totalCount: 5,
+        nextCursor: 'ord-2',
+      });
     });
 
     it('defaults orderBy to updatedAt desc when no sortBy given', async () => {
-      (prisma.paginateMany as jest.Mock).mockResolvedValue({ data: [] });
+      (prisma.paginateMany as jest.Mock).mockResolvedValue({
+        data: [],
+        total: 0,
+      });
 
       await service.getOrders(orgId, { withItems: false } as any);
 

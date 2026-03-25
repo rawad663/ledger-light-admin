@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PaginationOptionsQueryParamDto } from '@src/common/dto/pagination.dto';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
 import {
   CreateProductDto,
   GetProductsResponseDto,
+  ProductQueryParamDto,
   UpdateProductDto,
 } from './product.dto';
 import { InventoryService } from '../inventory/inventory.service';
@@ -11,6 +11,7 @@ import {
   InventoryAdjustment,
   InventoryLevel,
   Product,
+  Prisma,
 } from '@prisma/generated/client';
 
 @Injectable()
@@ -22,25 +23,47 @@ export class ProductService {
 
   async getProducts(
     organizationId: string,
-    query: PaginationOptionsQueryParamDto,
+    query: ProductQueryParamDto,
   ): Promise<GetProductsResponseDto> {
-    const products = await this.prismaService.paginateMany(
-      this.prismaService.product,
-      {
+    const where: Prisma.ProductWhereInput = { organizationId };
+
+    if (query.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { sku: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.category) {
+      where.category = query.category;
+    }
+
+    const [{ data: products, total }, distinctCategories] = await Promise.all([
+      this.prismaService.paginateMany(
+        this.prismaService.product,
+        { where },
+        {
+          limit: query.limit,
+          cursor: query.cursor,
+          orderBy: query.sortBy
+            ? { [query.sortBy]: query.sortOrder || 'desc' }
+            : { createdAt: 'desc' },
+        },
+      ),
+      this.prismaService.product.findMany({
         where: { organizationId },
-      },
-      {
-        limit: query.limit,
-        cursor: query.cursor,
-        orderBy: query.sortBy
-          ? { [query.sortBy]: query.sortOrder || 'desc' }
-          : { createdAt: 'desc' },
-      },
-    );
+        select: { category: true },
+        distinct: ['category'],
+      }),
+    ]);
 
     return {
       data: products,
-      totalCount: products.length,
+      totalCount: total,
+      categories: distinctCategories
+        .map((p) => p.category)
+        .filter((c): c is string => c !== null)
+        .sort(),
       nextCursor:
         products.length === query.limit
           ? products[products.length - 1].id

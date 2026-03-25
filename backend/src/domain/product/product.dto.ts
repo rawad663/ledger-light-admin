@@ -1,6 +1,7 @@
 // ...existing code...
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsDate,
   IsInt,
@@ -11,8 +12,11 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { PickType } from '@nestjs/swagger';
-import { createPaginatedResponseDto } from '@src/common/dto/pagination.dto';
+import { ApiProperty, PickType } from '@nestjs/swagger';
+import {
+  PaginationOptionsQueryParamDto,
+  createPaginatedResponseDto,
+} from '@src/common/dto/pagination.dto';
 
 export class ProductDto {
   @IsString()
@@ -99,6 +103,21 @@ export class UpdateProductDto {
   active?: boolean;
 }
 
+export class ProductQueryParamDto extends PaginationOptionsQueryParamDto {
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string;
+}
+
 export class GetProductsResponseDto extends createPaginatedResponseDto(
   ProductDto,
-) {}
+) {
+  @IsArray()
+  @IsString({ each: true })
+  @ApiProperty({ type: [String] })
+  categories: string[];
+}

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Param,
   Patch,
   Post,
@@ -17,8 +18,11 @@ import {
   type CurrentOrg,
 } from '@src/common/decorators/current-org.decorator';
 import { ProductService } from './product.service';
-import { PaginationOptionsQueryParamDto } from '@src/common/dto/pagination.dto';
-import { CreateProductDto, UpdateProductDto } from './product.dto';
+import {
+  CreateProductDto,
+  ProductQueryParamDto,
+  UpdateProductDto,
+} from './product.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '@src/common/decorators/current-user.decorator';
 import { type UserWithMemberships } from '../auth/strategies/jwt.strategy';
@@ -39,12 +43,16 @@ export class ProductController {
     summary: 'Get products',
     description: 'List products for the active organization with pagination.',
     ok: GetProductsResponseDto,
-    queries: appendToPaginationQuery([]),
+    queries: appendToPaginationQuery([
+      { name: 'search', description: 'Search by name or SKU', type: String },
+      { name: 'category', description: 'Filter by category', type: String },
+    ]),
   })
   getProducts(
     @CurrentOrganization() organization: CurrentOrg,
-    @Query() query: PaginationOptionsQueryParamDto,
+    @Query() query: ProductQueryParamDto,
   ) {
+    Logger.debug(query);
     return this.productService.getProducts(organization.organizationId, query);
   }
 
