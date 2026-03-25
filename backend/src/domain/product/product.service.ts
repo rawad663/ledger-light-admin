@@ -24,7 +24,7 @@ export class ProductService {
     organizationId: string,
     query: PaginationOptionsQueryParamDto,
   ): Promise<GetProductsResponseDto> {
-    const products = await this.prismaService.paginateMany(
+    const { data: products, total } = await this.prismaService.paginateMany(
       this.prismaService.product,
       {
         where: { organizationId },
@@ -40,7 +40,7 @@ export class ProductService {
 
     return {
       data: products,
-      totalCount: products.length,
+      totalCount: total,
       nextCursor:
         products.length === query.limit
           ? products[products.length - 1].id

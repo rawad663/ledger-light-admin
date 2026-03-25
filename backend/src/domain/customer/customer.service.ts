@@ -25,7 +25,7 @@ export class CustomerService {
     organizationId,
     query,
   }: GetCustomersArgs): Promise<GetCustomersResponseDto> {
-    const customers = await this.prismaService.paginateMany(
+    const { data: customers, total } = await this.prismaService.paginateMany(
       this.prismaService.customer,
       {
         where: { organizationId },
@@ -41,7 +41,7 @@ export class CustomerService {
 
     return {
       data: customers,
-      totalCount: customers.length,
+      totalCount: total,
       nextCursor:
         customers.length === query.limit
           ? customers[customers.length - 1].id

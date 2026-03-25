@@ -11,7 +11,6 @@ import {
   GetOrdersQueryDto,
   OrderDto,
   OrderItemDto,
-  OrderWithItemsDto,
   TransitionStatusBodyDto,
   UpdateOrderDto,
 } from './order.dto';
@@ -208,13 +207,10 @@ export class OrderService {
     return updatedOrder;
   }
 
-  async getOrders(
-    orgId: string,
-    query: GetOrdersQueryDto,
-  ): Promise<OrderWithItemsDto> {
+  async getOrders(orgId: string, query: GetOrdersQueryDto) {
     const { withItems, status, ...paginationQuery } = query;
 
-    return (await this.prismaService.paginateMany(
+    const { data, total } = await this.prismaService.paginateMany(
       this.prismaService.order,
       {
         where: { organizationId: orgId, status },
@@ -226,7 +222,16 @@ export class OrderService {
           ? { [paginationQuery.sortBy]: paginationQuery.sortOrder || 'desc' }
           : { updatedAt: 'desc' },
       },
-    )) as unknown as Order & { items: OrderItem[] };
+    );
+
+    return {
+      data,
+      totalCount: total,
+      nextCursor:
+        data.length === paginationQuery.limit
+          ? data[data.length - 1].id
+          : undefined,
+    };
   }
 
   async getOrderById(orgId: string, orderId: string, query: GetOrderQueryDto) {

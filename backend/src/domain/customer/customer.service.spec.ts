@@ -27,7 +27,7 @@ describe('CustomerService', () => {
         { id: '1', createdAt: new Date() },
         { id: '2', createdAt: new Date() },
       ] as any[];
-      prisma.paginateMany.mockResolvedValue(items);
+      prisma.paginateMany.mockResolvedValue({ data: items, total: 10 });
 
       const res = await service.getCustomers({
         organizationId: 'org-1',
@@ -44,12 +44,12 @@ describe('CustomerService', () => {
         { where: { organizationId: 'org-1' } },
         expect.objectContaining({ limit: 2 }),
       );
-      expect(res).toEqual({ data: items, totalCount: 2, nextCursor: '2' });
+      expect(res).toEqual({ data: items, totalCount: 10, nextCursor: '2' });
     });
 
     it('omits nextCursor when last page', async () => {
       const items = [{ id: '1', createdAt: new Date() }] as any[];
-      prisma.paginateMany.mockResolvedValue(items);
+      prisma.paginateMany.mockResolvedValue({ data: items, total: 10 });
 
       const res = await service.getCustomers({
         organizationId: 'org-1',
@@ -68,7 +68,7 @@ describe('CustomerService', () => {
       );
       expect(res).toEqual({
         data: items,
-        totalCount: 1,
+        totalCount: 10,
         nextCursor: undefined,
       });
     });
