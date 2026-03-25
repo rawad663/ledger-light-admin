@@ -88,8 +88,8 @@ export class InventoryService {
       where.product = {
         ...(where.product as Prisma.ProductWhereInput),
         OR: [
-          { name: { contains: query.search as string, mode: 'insensitive' } },
-          { sku: { contains: query.search as string, mode: 'insensitive' } },
+          { name: { contains: query.search, mode: 'insensitive' } },
+          { sku: { contains: query.search, mode: 'insensitive' } },
         ],
       };
     }

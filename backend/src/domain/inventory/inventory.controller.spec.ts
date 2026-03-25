@@ -100,10 +100,7 @@ describe('InventoryController', () => {
 
       const res = await controller.getLevels(org, query);
 
-      expect(service.getLevels).toHaveBeenCalledWith(
-        org.organizationId,
-        query,
-      );
+      expect(service.getLevels).toHaveBeenCalledWith(org.organizationId, query);
       expect(res).toBe(result);
     });
   });
