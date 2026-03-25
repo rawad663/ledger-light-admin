@@ -485,6 +485,7 @@ export interface components {
             data: components["schemas"]["ProductDto"][];
             nextCursor?: string;
             totalCount: number;
+            categories: string[];
         };
         InventoryDto: {
             /** Format: uuid */
@@ -1158,6 +1159,10 @@ export interface operations {
                 sortBy?: string;
                 /** @description Sort direction */
                 sortOrder?: "asc" | "desc";
+                /** @description Search by name or SKU */
+                search?: string;
+                /** @description Filter by category */
+                category?: string;
             };
             header: {
                 /** @description Active organization context for the request. Must be an organization the user is a member of. */

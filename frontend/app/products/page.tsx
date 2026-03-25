@@ -1,14 +1,18 @@
 import { AppShell } from "@/components/app-shell";
-import {
-  ProductsPage,
-  PRODUCTS_PAGE_LIMIT,
-} from "@/components/products/products-page";
+import { ProductsPage } from "@/components/products/products-page";
 import { createApi } from "@/lib/api";
 
-export default async function Products() {
+export default async function Products({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; category?: string }>;
+}) {
+  const { search, category } = await searchParams;
   const api = await createApi();
   const { data, error } = await api.GET("/products", {
-    query: { limit: PRODUCTS_PAGE_LIMIT },
+    params: {
+      query: { limit: 50, search, category },
+    },
   });
 
   if (error) {
@@ -23,6 +27,8 @@ export default async function Products() {
         products={products}
         total={data?.totalCount ?? 0}
         nextCursor={data?.nextCursor}
+        categories={data?.categories ?? []}
+        initialSearch={search ?? ""}
       />
     </AppShell>
   );

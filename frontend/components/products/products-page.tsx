@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Plus,
   Search,
@@ -59,12 +60,14 @@ type ProductProp = Product & {
   price: number;
 };
 
-export const PRODUCTS_PAGE_LIMIT = 20;
+export const PRODUCTS_PAGE_LIMIT = 50;
 
 type Props = {
   products: Product[];
   total: number;
   nextCursor?: string;
+  categories: string[];
+  initialSearch: string;
 };
 
 function toProductProp(p: Product): ProductProp {
@@ -81,8 +84,47 @@ export function ProductsPage({
   products: initialProducts,
   total: initialTotal,
   nextCursor: initialNextCursor,
+  categories,
+  initialSearch,
 }: Props) {
   const apiClient = useApiClient();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const search = searchParams.get("search") ?? "";
+  const categoryFilter = searchParams.get("category") ?? "all";
+
+  const [searchInput, setSearchInput] = React.useState(initialSearch);
+  const [showEmpty, setShowEmpty] = React.useState(false);
+
+  // Debounce search input → URL param
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams);
+      if (searchInput) {
+        params.set("search", searchInput);
+      } else {
+        params.delete("search");
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function updateParams(updates: Record<string, string>) {
+    const params = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(updates)) {
+      if (!value || value === "all") {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    }
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`);
+  }
 
   const {
     data: products,
@@ -99,11 +141,17 @@ export function ProductsPage({
     initialTotal,
     initialNextCursor,
     limit: PRODUCTS_PAGE_LIMIT,
+    filterKey: `${search}|${categoryFilter}`,
     fetchPage: React.useCallback(
       async (cursor?: string) => {
         const { data } = await apiClient.GET("/products", {
           params: {
-            query: { limit: PRODUCTS_PAGE_LIMIT, cursor },
+            query: {
+              limit: PRODUCTS_PAGE_LIMIT,
+              cursor,
+              search: search || undefined,
+              category: categoryFilter === "all" ? undefined : categoryFilter,
+            },
           },
         });
         return {
@@ -112,24 +160,11 @@ export function ProductsPage({
           nextCursor: data?.nextCursor ?? undefined,
         };
       },
-      [apiClient],
+      [apiClient, search, categoryFilter],
     ),
   });
 
-  const [search, setSearch] = React.useState("");
-  const [categoryFilter, setCategoryFilter] = React.useState("all");
-  const [showEmpty, setShowEmpty] = React.useState(false);
-
-  const displayProducts = (showEmpty ? [] : products)
-    .map(toProductProp)
-    .filter((p) => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory =
-        categoryFilter === "all" || p.category === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
+  const displayProducts = (showEmpty ? [] : products).map(toProductProp);
 
   return (
     <div className="p-6 space-y-6">
@@ -168,20 +203,25 @@ export function ProductsPage({
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search products by name or SKU..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select
+          value={categoryFilter}
+          onValueChange={(value) => updateParams({ category: value })}
+        >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="Apparel">Apparel</SelectItem>
-            <SelectItem value="Outerwear">Outerwear</SelectItem>
-            <SelectItem value="Accessories">Accessories</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -211,8 +251,8 @@ export function ProductsPage({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setSearch("");
-                    setCategoryFilter("all");
+                    setSearchInput("");
+                    updateParams({ search: "", category: "" });
                   }}
                 >
                   Clear filters

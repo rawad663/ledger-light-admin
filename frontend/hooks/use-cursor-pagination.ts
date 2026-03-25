@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 type PaginatedResult<T> = {
   data: T[];
@@ -11,6 +11,7 @@ type UseCursorPaginationOptions<T> = {
   initialTotal: number;
   initialNextCursor?: string;
   limit: number;
+  filterKey?: string;
   fetchPage: (cursor?: string) => Promise<PaginatedResult<T>>;
 };
 
@@ -19,6 +20,7 @@ export function useCursorPagination<T>({
   initialTotal,
   initialNextCursor,
   limit,
+  filterKey,
   fetchPage,
 }: UseCursorPaginationOptions<T>) {
   const [data, setData] = useState(initialData);
@@ -28,6 +30,30 @@ export function useCursorPagination<T>({
     undefined,
   ]);
   const [loading, setLoading] = useState(false);
+
+  // Reset pagination and refetch when filters change
+  const prevFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (prevFilterKey.current === filterKey) return;
+    prevFilterKey.current = filterKey;
+
+    let cancelled = false;
+    setLoading(true);
+    fetchPage(undefined)
+      .then((result) => {
+        if (cancelled) return;
+        setData(result.data);
+        setTotal(result.totalCount);
+        setNextCursor(result.nextCursor);
+        setCursorStack([undefined]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filterKey, fetchPage]);
 
   const page = cursorStack.length;
   const hasPrevious = page > 1;
