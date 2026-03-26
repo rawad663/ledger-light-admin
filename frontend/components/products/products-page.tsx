@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Search,
@@ -43,6 +44,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Empty } from "@/components/ui/empty";
+import { CreateProductForm } from "@/components/products/create-product-form";
+import { toast } from "@/hooks/use-toast";
 
 const inventoryColors: Record<string, string> = {
   "In Stock": "bg-success/15 text-success border-success/30",
@@ -88,8 +91,10 @@ export function ProductsPage({
   initialSearch,
 }: Props) {
   const apiClient = useApiClient();
+  const router = useRouter();
   const { searchParams, searchInput, setSearchInput, updateParams } =
     useUrlSearch(initialSearch);
+  const [createOpen, setCreateOpen] = React.useState(false);
 
   const search = searchParams.get("search") ?? "";
   const categoryFilter = searchParams.get("category") ?? "all";
@@ -158,11 +163,9 @@ export function ProductsPage({
             <Download className="mr-1.5 size-4" />
             Export
           </Button>
-          <Button size="sm" asChild>
-            <Link href="/products/new">
-              <Plus className="mr-1.5 size-4" />
-              Add Product
-            </Link>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 size-4" />
+            Add Product
           </Button>
         </div>
       </div>
@@ -210,11 +213,9 @@ export function ProductsPage({
               }
             >
               {showEmpty ? (
-                <Button size="sm" asChild>
-                  <Link href="/products/new">
-                    <Plus className="mr-1.5 size-4" />
-                    Add Product
-                  </Link>
+                <Button size="sm" onClick={() => setCreateOpen(true)}>
+                  <Plus className="mr-1.5 size-4" />
+                  Add Product
                 </Button>
               ) : (
                 <Button
@@ -353,6 +354,16 @@ export function ProductsPage({
           </>
         )}
       </div>
+
+      <CreateProductForm
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        categories={categories}
+        onSuccess={() => {
+          toast({ title: "Product created" });
+          router.refresh();
+        }}
+      />
     </div>
   );
 }
