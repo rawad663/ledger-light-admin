@@ -32,9 +32,6 @@ export class AuditLogService {
       },
       {
         ...paginationQuery,
-        orderBy: paginationQuery.sortBy
-          ? { [paginationQuery.sortBy]: paginationQuery.sortOrder || 'desc' }
-          : { createdAt: 'desc' },
       },
     );
 

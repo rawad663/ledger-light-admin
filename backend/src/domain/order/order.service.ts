@@ -248,12 +248,7 @@ export class OrderService {
             items: withItems,
           },
         },
-        {
-          ...paginationQuery,
-          orderBy: paginationQuery.sortBy
-            ? { [paginationQuery.sortBy]: paginationQuery.sortOrder || 'desc' }
-            : { updatedAt: 'desc' },
-        },
+        { ...paginationQuery },
       ),
       this.prismaService.location.findMany({
         where: { organizationId: orgId },

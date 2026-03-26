@@ -36,13 +36,7 @@ export class InventoryService {
         where: { organizationId },
         include: { inventoryLevels: true },
       },
-      {
-        limit: query.limit,
-        cursor: query.cursor,
-        orderBy: query.sortBy
-          ? { [query.sortBy]: query.sortOrder || 'desc' }
-          : { name: 'asc' },
-      },
+      { ...query },
     );
 
     const data = products.map((product) => {
@@ -76,15 +70,18 @@ export class InventoryService {
     organizationId: string,
     query: GetLevelsQueryDto,
   ): Promise<GetInventoryLevelsResponseDto> {
+    const { locationId, search, lowStockOnly, productId, ...paginationQuery } =
+      query;
+
     const where: Prisma.InventoryLevelWhereInput = {
-      product: { organizationId },
+      product: { organizationId, id: productId },
     };
 
-    if (query.locationId) {
+    if (locationId) {
       where.locationId = query.locationId;
     }
 
-    if (query.search) {
+    if (search) {
       where.product = {
         ...(where.product as Prisma.ProductWhereInput),
         OR: [
@@ -94,7 +91,7 @@ export class InventoryService {
       };
     }
 
-    if (query.lowStockOnly) {
+    if (lowStockOnly) {
       where.quantity = { lte: LOW_STOCK_THRESHOLD };
     }
 
@@ -106,13 +103,7 @@ export class InventoryService {
           include: { product: true, location: true },
           omit: { productId: true, locationId: true },
         },
-        {
-          limit: query.limit,
-          cursor: query.cursor,
-          orderBy: query.sortBy
-            ? { [query.sortBy]: query.sortOrder || 'desc' }
-            : { updatedAt: 'desc' },
-        },
+        { ...paginationQuery },
       ),
       this.prismaService.location.findMany({
         where: { organizationId },

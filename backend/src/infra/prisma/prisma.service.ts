@@ -30,6 +30,10 @@ export class PrismaService
     await this.$disconnect();
   }
 
+  private buildOrderBy(sortBy?: string, sortOrder?: 'asc' | 'desc') {
+    return sortBy ? { [sortBy]: sortOrder || 'desc' } : undefined;
+  }
+
   /**
    * TODO: Consider in the future moving this helper into a seperate class to keep this service focused
    * on Client Management. Something like "src/common/utils/pagination.ts"
@@ -43,7 +47,9 @@ export class PrismaService
     paginationOptions: {
       limit: number;
       cursor?: string;
-      orderBy?: Record<string, 'asc' | 'desc'>;
+      orderBy?: Record<string, 'asc' | 'desc' | Record<string, any>>;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
     },
   ) {
     const countFn = model.count as (arg: {
@@ -58,7 +64,12 @@ export class PrismaService
           cursor: { id: paginationOptions.cursor },
           skip: 1,
         }),
-        orderBy: paginationOptions.orderBy || { createdAt: 'desc' },
+        orderBy:
+          paginationOptions.orderBy ||
+          this.buildOrderBy(
+            paginationOptions.sortBy,
+            paginationOptions.sortOrder,
+          ),
       }),
       countFn({ where: (query as { where?: unknown }).where }),
     ]);

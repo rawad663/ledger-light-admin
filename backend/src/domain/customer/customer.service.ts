@@ -37,13 +37,7 @@ export class CustomerService {
     const { data: customers, total } = await this.prismaService.paginateMany(
       this.prismaService.customer,
       { where },
-      {
-        limit: paginationQuery.limit,
-        cursor: paginationQuery.cursor,
-        orderBy: paginationQuery.sortBy
-          ? { [paginationQuery.sortBy]: paginationQuery.sortOrder || 'desc' }
-          : undefined,
-      },
+      { ...paginationQuery },
     );
 
     const customerIds = customers.map((c: { id: string }) => c.id);
