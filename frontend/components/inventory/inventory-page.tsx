@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Download,
@@ -53,6 +54,8 @@ import {
 
 import { type components } from "@/lib/api-types";
 import { useUrlSearch } from "@/hooks/use-url-search";
+import { toast } from "@/hooks/use-toast";
+import { AdjustStockForm } from "@/components/inventory/adjust-stock-form";
 
 type InventoryLevel = components["schemas"]["InventoryLevelsDataDto"];
 type LocationDto = components["schemas"]["LocationDto"];
@@ -90,9 +93,17 @@ export function InventoryPage({
   initialSearch,
 }: Props) {
   const apiClient = useApiClient();
+  const router = useRouter();
 
   const { searchParams, searchInput, setSearchInput, updateParams } =
     useUrlSearch(initialSearch);
+
+  const [adjustOpen, setAdjustOpen] = React.useState(false);
+  const [adjustDefaults, setAdjustDefaults] = React.useState<{
+    productId?: string;
+    productName?: string;
+    locationId?: string;
+  }>({});
 
   const search = searchParams.get("search") ?? "";
   const locationFilter = searchParams.get("location") ?? "all";
@@ -162,8 +173,14 @@ export function InventoryPage({
             <Download className="mr-1.5 size-4" />
             Export
           </Button>
-          <Button size="sm" asChild>
-            <Link href="/inventory/adjust">Adjust Stock</Link>
+          <Button
+            size="sm"
+            onClick={() => {
+              setAdjustDefaults({});
+              setAdjustOpen(true);
+            }}
+          >
+            Adjust Stock
           </Button>
         </div>
       </div>
@@ -274,78 +291,93 @@ export function InventoryPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {inventoryLevels.map((item) => {
-                  const status = getStockStatus(item.quantity);
-                  return (
-                    <TableRow
-                      key={item.id}
-                      className={cn(
-                        "cursor-pointer group",
-                        status === "Reorder" && "bg-destructive/5",
-                      )}
-                    >
-                      <TableCell className="font-medium">
-                        <Link
-                          href={`/products/${item.product.id}`}
-                          className="hover:text-primary"
-                        >
-                          {item.product.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {item.product.sku}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {item.location.name}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span
-                          className={cn(
-                            "font-medium",
-                            item.quantity <= LOW_STOCK_THRESHOLD &&
-                              "text-destructive",
-                          )}
-                        >
-                          {item.quantity}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn("font-medium", statusColors[status])}
-                        >
-                          {status === "Reorder" && (
-                            <AlertTriangle className="mr-1 size-3" />
-                          )}
-                          {status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Adjust quantity</DropdownMenuItem>
-                            <DropdownMenuItem>Transfer stock</DropdownMenuItem>
-                            <DropdownMenuItem>View history</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              Create purchase order
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {inventoryLevels
+                  .sort((a, b) => a.product.name.localeCompare(b.product.name))
+                  .map((item) => {
+                    const status = getStockStatus(item.quantity);
+                    return (
+                      <TableRow
+                        key={item.id}
+                        className={cn(
+                          "cursor-pointer group",
+                          status === "Reorder" && "bg-destructive/5",
+                        )}
+                      >
+                        <TableCell className="font-medium">
+                          <Link
+                            href={`/products/${item.product.id}`}
+                            className="hover:text-primary"
+                          >
+                            {item.product.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {item.product.sku}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {item.location.name}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span
+                            className={cn(
+                              "font-medium",
+                              item.quantity <= LOW_STOCK_THRESHOLD &&
+                                "text-destructive",
+                            )}
+                          >
+                            {item.quantity}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn("font-medium", statusColors[status])}
+                          >
+                            {status === "Reorder" && (
+                              <AlertTriangle className="mr-1 size-3" />
+                            )}
+                            {status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <MoreHorizontal className="size-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setAdjustDefaults({
+                                    productId: item.product.id,
+                                    productName: item.product.name,
+                                    locationId: item.location.id,
+                                  });
+                                  setAdjustOpen(true);
+                                }}
+                              >
+                                Adjust quantity
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                Transfer stock
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>View history</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem>
+                                Create purchase order
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
               </TableBody>
             </Table>
 
@@ -382,6 +414,19 @@ export function InventoryPage({
           </>
         )}
       </div>
+
+      <AdjustStockForm
+        open={adjustOpen}
+        onOpenChange={setAdjustOpen}
+        locations={locations}
+        defaultProductId={adjustDefaults.productId}
+        defaultProductName={adjustDefaults.productName}
+        defaultLocationId={adjustDefaults.locationId}
+        onSuccess={() => {
+          toast({ title: "Stock adjusted" });
+          router.refresh();
+        }}
+      />
     </div>
   );
 }
