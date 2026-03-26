@@ -15,10 +15,11 @@ import {
   OrgProtected,
 } from '@src/common/decorators/auth.decorator';
 import { CustomerService } from './customer.service';
-import { PaginationOptionsQueryParamDto } from '@src/common/dto/pagination.dto';
 import {
   CreateCustomerDto,
+  CustomerDetailDto,
   CustomerDto,
+  GetCustomersQueryDto,
   GetCustomersResponseDto,
   UpdateCustomerDto,
 } from './customer.dto';
@@ -41,22 +42,25 @@ export class CustomerController {
     summary: 'Get customers',
     description: 'List customers for the active organization with pagination.',
     ok: GetCustomersResponseDto,
-    queries: appendToPaginationQuery([]),
+    queries: appendToPaginationQuery([
+      {
+        name: 'search',
+        description: 'Search by name, email, or phone',
+        type: String,
+      },
+    ]),
   })
   @Get()
   getCustomers(
     @CurrentOrganization() org: CurrentOrg,
-    @Query() query: PaginationOptionsQueryParamDto,
+    @Query() query: GetCustomersQueryDto,
   ) {
-    return this.customerService.getCustomers({
-      organizationId: org.organizationId,
-      query,
-    });
+    return this.customerService.getCustomers(org.organizationId, query);
   }
 
   @ApiDoc({
     summary: 'Get individual customer',
-    ok: CustomerDto,
+    ok: CustomerDetailDto,
     notFoundDesc: 'Customer not found',
     params: [{ name: 'id', description: 'Customer ID', type: String }],
   })
@@ -64,7 +68,7 @@ export class CustomerController {
   getCustomerById(
     @CurrentOrganization() org: CurrentOrg,
     @Param('id') id: string,
-  ): Promise<CustomerDto> {
+  ) {
     return this.customerService.getCustomerById({
       organizationId: org.organizationId,
       customerId: id,

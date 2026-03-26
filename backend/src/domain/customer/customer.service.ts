@@ -2,15 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
 import {
   CreateCustomerDto,
+  CustomerDetailDto,
+  GetCustomersQueryDto,
   GetCustomersResponseDto,
   UpdateCustomerDto,
 } from './customer.dto';
-import { PaginationOptionsQueryParamDto } from '@src/common/dto/pagination.dto';
-
-export type GetCustomersArgs = {
-  organizationId: string;
-  query: PaginationOptionsQueryParamDto;
-};
+import { Prisma } from '@prisma/generated/client';
 
 export type GetCustomerByIdArgs = {
   organizationId: string;
@@ -21,35 +18,95 @@ export type GetCustomerByIdArgs = {
 export class CustomerService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getCustomers({
-    organizationId,
-    query,
-  }: GetCustomersArgs): Promise<GetCustomersResponseDto> {
+  async getCustomers(
+    organizationId: string,
+    query: GetCustomersQueryDto,
+  ): Promise<GetCustomersResponseDto> {
+    const { search, ...paginationQuery } = query;
+
+    const where: Prisma.CustomerWhereInput = { organizationId };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     const { data: customers, total } = await this.prismaService.paginateMany(
       this.prismaService.customer,
+      { where },
       {
-        where: { organizationId },
-      },
-      {
-        limit: query.limit,
-        cursor: query.cursor,
-        orderBy: query.sortBy
-          ? { [query.sortBy]: query.sortOrder || 'desc' }
+        limit: paginationQuery.limit,
+        cursor: paginationQuery.cursor,
+        orderBy: paginationQuery.sortBy
+          ? { [paginationQuery.sortBy]: paginationQuery.sortOrder || 'desc' }
           : undefined,
       },
     );
 
+    const customerIds = customers.map((c: { id: string }) => c.id);
+
+    let statsMap = new Map<
+      string,
+      { sum: number; count: number; maxDate: Date | null }
+    >();
+
+    if (customerIds.length > 0) {
+      const stats = await this.prismaService.order.groupBy({
+        by: ['customerId'],
+        where: { customerId: { in: customerIds }, organizationId },
+        _sum: { totalCents: true },
+        _count: true,
+        _max: { createdAt: true },
+      });
+
+      statsMap = new Map(
+        stats.map((s) => [
+          s.customerId!,
+          {
+            sum: s._sum.totalCents ?? 0,
+            count: s._count,
+            maxDate: s._max.createdAt,
+          },
+        ]),
+      );
+    }
+
+    const enrichedCustomers = customers.map(
+      (customer: { id: string; [key: string]: unknown }) => {
+        const stats = statsMap.get(customer.id);
+        const lifetimeSpendCents = stats?.sum ?? 0;
+        const ordersCount = stats?.count ?? 0;
+        const avgOrderValueCents =
+          ordersCount > 0 ? Math.round(lifetimeSpendCents / ordersCount) : 0;
+        const lastOrderDate = stats?.maxDate ?? null;
+
+        return {
+          ...customer,
+          lifetimeSpendCents,
+          ordersCount,
+          avgOrderValueCents,
+          lastOrderDate,
+        };
+      },
+    );
+
     return {
-      data: customers,
+      data: enrichedCustomers as GetCustomersResponseDto['data'],
       totalCount: total,
       nextCursor:
-        customers.length === query.limit
+        customers.length === paginationQuery.limit
           ? customers[customers.length - 1].id
           : undefined,
     };
   }
 
-  async getCustomerById({ organizationId, customerId }: GetCustomerByIdArgs) {
+  async getCustomerById({
+    organizationId,
+    customerId,
+  }: GetCustomerByIdArgs): Promise<CustomerDetailDto> {
     const customer = await this.prismaService.customer.findFirst({
       where: { id: customerId, organizationId },
     });
@@ -58,7 +115,35 @@ export class CustomerService {
       throw new NotFoundException('Customer not found');
     }
 
-    return customer;
+    const [aggregateResult, recentOrders] = await Promise.all([
+      this.prismaService.order.aggregate({
+        where: { customerId, organizationId },
+        _sum: { totalCents: true },
+        _count: true,
+        _max: { createdAt: true },
+      }),
+      this.prismaService.order.findMany({
+        where: { customerId, organizationId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: { id: true, totalCents: true, status: true, createdAt: true },
+      }),
+    ]);
+
+    const lifetimeSpendCents = aggregateResult._sum.totalCents ?? 0;
+    const ordersCount = aggregateResult._count;
+    const avgOrderValueCents =
+      ordersCount > 0 ? Math.round(lifetimeSpendCents / ordersCount) : 0;
+    const lastOrderDate = aggregateResult._max.createdAt ?? null;
+
+    return {
+      ...customer,
+      lifetimeSpendCents,
+      ordersCount,
+      avgOrderValueCents,
+      lastOrderDate,
+      recentOrders,
+    };
   }
 
   async createCustomer({
