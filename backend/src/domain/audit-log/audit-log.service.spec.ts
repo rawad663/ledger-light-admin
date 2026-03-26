@@ -48,10 +48,9 @@ describe('AuditLogService', () => {
             },
           },
         },
-        expect.objectContaining({
+        {
           limit: 2,
-          orderBy: { createdAt: 'desc' },
-        }),
+        },
       );
       expect(result).toEqual({
         data: items,
@@ -158,7 +157,8 @@ describe('AuditLogService', () => {
         (prisma as any).auditLog,
         expect.anything(),
         expect.objectContaining({
-          orderBy: { action: 'asc' },
+          sortBy: 'action',
+          sortOrder: 'asc',
         }),
       );
     });

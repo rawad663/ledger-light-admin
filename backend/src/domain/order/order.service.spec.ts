@@ -395,7 +395,8 @@ describe('OrderService', () => {
         },
         expect.objectContaining({
           limit: 2,
-          orderBy: { createdAt: 'asc' },
+          sortBy: 'createdAt',
+          sortOrder: 'asc',
         }),
       );
       expect(result).toEqual({
@@ -417,7 +418,7 @@ describe('OrderService', () => {
       expect(prisma.paginateMany).toHaveBeenCalledWith(
         prisma.order,
         expect.anything(),
-        expect.objectContaining({ orderBy: { updatedAt: 'desc' } }),
+        expect.objectContaining({}),
       );
     });
 

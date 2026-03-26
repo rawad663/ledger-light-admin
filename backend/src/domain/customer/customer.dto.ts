@@ -1,14 +1,24 @@
 import {
+  IsArray,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   IsDate,
   IsEmail,
   IsUUID,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 import { CustomerStatus } from '@prisma/generated/client';
+import { OrderStatus } from '@prisma/generated/enums';
 import { PickType } from '@nestjs/mapped-types';
-import { createPaginatedResponseDto } from '@src/common/dto/pagination.dto';
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  createPaginatedResponseDto,
+  PaginationOptionsQueryParamDto,
+} from '@src/common/dto/pagination.dto';
 
 export enum SortOrder {
   ASC = 'asc',
@@ -77,6 +87,77 @@ export class UpdateCustomerDto {
   internalNote: string | null;
 }
 
+export class GetCustomersQueryDto extends PaginationOptionsQueryParamDto {
+  @IsString()
+  @IsOptional()
+  search?: string;
+}
+
+export class CustomerListItemDto extends CustomerDto {
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  lifetimeSpendCents: number;
+
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  ordersCount: number;
+
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  avgOrderValueCents: number;
+
+  @IsDate()
+  @IsOptional()
+  lastOrderDate?: Date | null;
+}
+
 export class GetCustomersResponseDto extends createPaginatedResponseDto(
-  CustomerDto,
+  CustomerListItemDto,
 ) {}
+
+export class CustomerRecentOrderDto {
+  @IsUUID('loose')
+  id: string;
+
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  totalCents: number;
+
+  @ApiProperty({ enum: OrderStatus })
+  @IsEnum(OrderStatus)
+  status: OrderStatus;
+
+  @IsDate()
+  createdAt: Date;
+}
+
+export class CustomerDetailDto extends CustomerDto {
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  lifetimeSpendCents: number;
+
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  ordersCount: number;
+
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  avgOrderValueCents: number;
+
+  @IsDate()
+  @IsOptional()
+  lastOrderDate?: Date | null;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CustomerRecentOrderDto)
+  @ApiProperty({ type: [CustomerRecentOrderDto] })
+  recentOrders: CustomerRecentOrderDto[];
+}
