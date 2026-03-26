@@ -50,15 +50,15 @@ describe('CustomerController', () => {
     const organization = { organizationId: 'org-1', role: 'ADMIN' };
 
     it('calls service with organizationId and query', async () => {
-      const query = { limit: 10, cursor: undefined };
+      const query = { limit: 10, cursor: undefined, search: 'john' };
       const result = { data: [], totalCount: 0 };
-      service.getCustomers.mockResolvedValue(result);
+      service.getCustomers.mockResolvedValue(result as any);
 
-      const res = await controller.getCustomers(organization, query);
-      expect(service.getCustomers).toHaveBeenCalledWith({
-        organizationId: 'org-1',
-        query,
-      });
+      const res = await controller.getCustomers(
+        organization as any,
+        query as any,
+      );
+      expect(service.getCustomers).toHaveBeenCalledWith('org-1', query);
       expect(res).toBe(result);
     });
   });
