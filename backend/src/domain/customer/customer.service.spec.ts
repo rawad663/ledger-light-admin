@@ -90,7 +90,7 @@ describe('CustomerService', () => {
       expect(prisma.paginateMany).toHaveBeenCalledWith(
         prisma.customer,
         { where: { organizationId: orgId } },
-        { limit: 2, cursor: '0', orderBy: { createdAt: 'asc' } },
+        { limit: 2, cursor: '0', sortBy: 'createdAt', sortOrder: 'asc' },
       );
       expect(res.nextCursor).toBeUndefined();
     });

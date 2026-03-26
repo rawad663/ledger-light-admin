@@ -43,7 +43,11 @@ describe('InventoryService', () => {
           where: { organizationId: 'org-1' },
           include: { inventoryLevels: true },
         }),
-        expect.objectContaining({ limit: 20, orderBy: { name: 'asc' } }),
+        expect.objectContaining({
+          limit: 20,
+          sortBy: undefined,
+          sortOrder: undefined,
+        }),
       );
       expect(res).toEqual({
         data: [
@@ -108,7 +112,11 @@ describe('InventoryService', () => {
           include: { product: true, location: true },
           omit: { productId: true, locationId: true },
         }),
-        expect.objectContaining({ limit: 2, orderBy: { updatedAt: 'desc' } }),
+        expect.objectContaining({
+          limit: 2,
+          sortBy: undefined,
+          sortOrder: undefined,
+        }),
       );
 
       expect(res).toEqual({
@@ -135,15 +143,15 @@ describe('InventoryService', () => {
 
       expect(prisma.paginateMany).toHaveBeenCalledWith(
         (prisma as any).inventoryLevel,
-        expect.objectContaining({
+        {
           where: {
-            product: { organizationId: 'org-1' },
+            product: { organizationId: 'org-1', id: 'prod-1' },
             locationId: 'loc-1',
           },
           include: { product: true, location: true },
           omit: { productId: true, locationId: true },
-        }),
-        { limit: 2, cursor: 'lvl-0', orderBy: { quantity: 'asc' } },
+        },
+        { limit: 2, cursor: 'lvl-0', sortBy: 'quantity', sortOrder: 'asc' },
       );
       expect(res).toEqual({
         data: items,
