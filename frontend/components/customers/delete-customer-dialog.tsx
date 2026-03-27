@@ -49,7 +49,7 @@ export function DeleteCustomerDialog({
     setDeleting(false);
 
     if (error) {
-      setApiError((error as any)?.message ?? "Failed to delete customer");
+      setApiError((error as Error)?.message ?? "Failed to delete customer");
       return;
     }
 
@@ -63,17 +63,16 @@ export function DeleteCustomerDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete customer?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete{" "}
+            This will deactivate{" "}
             <span className="font-medium text-foreground">
               {customer?.name}
-            </span>{" "}
-            and all associated data. This action cannot be undone.
+            </span>
+            . They will no longer appear in customer lists or be available for
+            new orders.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {apiError && (
-          <p className="text-sm text-destructive">{apiError}</p>
-        )}
+        {apiError && <p className="text-sm text-destructive">{apiError}</p>}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>

@@ -179,8 +179,9 @@ export class CustomerService {
   }
 
   async deleteCustomer({ organizationId, customerId }: GetCustomerByIdArgs) {
-    const customer = await this.prismaService.customer.delete({
+    const customer = await this.prismaService.customer.update({
       where: { id: customerId, organizationId },
+      data: { status: 'INACTIVE' },
     });
 
     return customer;

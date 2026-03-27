@@ -334,7 +334,7 @@ export function ProductsPage({
                               })
                             }
                           >
-                            Delete product
+                            Deactivate product
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

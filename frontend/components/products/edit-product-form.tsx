@@ -96,8 +96,7 @@ export function EditProductForm({
   React.useEffect(() => {
     if (open && product) {
       const productCategory = product.category ?? "";
-      const isCustom =
-        productCategory && !categories.includes(productCategory);
+      const isCustom = productCategory && !categories.includes(productCategory);
 
       form.reset({
         name: product.name,
@@ -138,19 +137,16 @@ export function EditProductForm({
       return;
     }
 
-    const { data, error, response } = await apiClient.PATCH(
-      "/products/{id}",
-      {
-        params: { path: { id: product.id } },
-        body,
-      },
-    );
+    const { data, error, response } = await apiClient.PATCH("/products/{id}", {
+      params: { path: { id: product.id } },
+      body,
+    });
 
     setSubmitting(false);
 
     if (error) {
       const message =
-        (error as any)?.message ??
+        (error as Error)?.message ??
         (response.status === 409
           ? "A product with this SKU already exists"
           : "Failed to update product");
@@ -297,9 +293,7 @@ export function EditProductForm({
               )}
             />
 
-            {apiError && (
-              <p className="text-sm text-destructive">{apiError}</p>
-            )}
+            {apiError && <p className="text-sm text-destructive">{apiError}</p>}
 
             <div className="flex gap-2 pt-2">
               <Button

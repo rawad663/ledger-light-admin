@@ -456,7 +456,7 @@ export function CreateOrderForm({
     setSubmitting(false);
 
     if (error) {
-      setApiError((error as any)?.message ?? "Failed to create order");
+      setApiError((error as Error)?.message ?? "Failed to create order");
       return;
     }
 

@@ -76,14 +76,14 @@ export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
     };
 
     const { data, error, response } = await apiClient.POST("/customers", {
-      body: body as any,
+      body,
     });
 
     setSubmitting(false);
 
     if (error) {
       const message =
-        (error as any)?.message ??
+        (error as Error)?.message ??
         (response.status === 409
           ? "A customer with this email already exists"
           : "Failed to create customer");
@@ -148,11 +148,7 @@ export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
                 <FormItem>
                   <FormLabel>Phone (optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="555-555-5555"
-                      {...field}
-                    />
+                    <Input type="tel" placeholder="555-555-5555" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -177,9 +173,7 @@ export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
               )}
             />
 
-            {apiError && (
-              <p className="text-sm text-destructive">{apiError}</p>
-            )}
+            {apiError && <p className="text-sm text-destructive">{apiError}</p>}
 
             <div className="flex gap-2 pt-2">
               <Button

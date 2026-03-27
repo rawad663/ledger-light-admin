@@ -113,7 +113,10 @@ export function CreateProductForm({
     },
   });
 
-  const selectedCategory = useWatch({ control: form.control, name: "category" });
+  const selectedCategory = useWatch({
+    control: form.control,
+    name: "category",
+  });
 
   // Fetch locations when sheet opens
   React.useEffect(() => {
@@ -175,7 +178,7 @@ export function CreateProductForm({
 
     if (error) {
       const message =
-        (error as any)?.message ??
+        (error as Error)?.message ??
         (response.status === 409
           ? "A product with this SKU already exists"
           : "Failed to create product");
@@ -312,10 +315,7 @@ export function CreateProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Location</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a location" />
@@ -355,9 +355,7 @@ export function CreateProductForm({
               />
             </div>
 
-            {apiError && (
-              <p className="text-sm text-destructive">{apiError}</p>
-            )}
+            {apiError && <p className="text-sm text-destructive">{apiError}</p>}
 
             <div className="flex gap-2 pt-2">
               <Button

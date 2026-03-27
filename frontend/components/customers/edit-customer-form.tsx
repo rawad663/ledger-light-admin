@@ -110,19 +110,16 @@ export function EditCustomerForm({
       internalNote: values.internalNote || null,
     };
 
-    const { data, error, response } = await apiClient.PATCH(
-      "/customers/{id}",
-      {
-        params: { path: { id: customer.id } },
-        body: body as any,
-      },
-    );
+    const { data, error, response } = await apiClient.PATCH("/customers/{id}", {
+      params: { path: { id: customer.id } },
+      body: body as any,
+    });
 
     setSubmitting(false);
 
     if (error) {
       const message =
-        (error as any)?.message ??
+        (error as Error)?.message ??
         (response.status === 409
           ? "A customer with this email already exists"
           : "Failed to update customer");
@@ -141,9 +138,7 @@ export function EditCustomerForm({
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader className="pb-4">
           <SheetTitle className="text-xl">Edit Customer</SheetTitle>
-          <SheetDescription>
-            Update customer information.
-          </SheetDescription>
+          <SheetDescription>Update customer information.</SheetDescription>
         </SheetHeader>
 
         <Form {...form}>
@@ -187,11 +182,7 @@ export function EditCustomerForm({
                 <FormItem>
                   <FormLabel>Phone (optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="555-555-5555"
-                      {...field}
-                    />
+                    <Input type="tel" placeholder="555-555-5555" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -241,9 +232,7 @@ export function EditCustomerForm({
               )}
             />
 
-            {apiError && (
-              <p className="text-sm text-destructive">{apiError}</p>
-            )}
+            {apiError && <p className="text-sm text-destructive">{apiError}</p>}
 
             <div className="flex gap-2 pt-2">
               <Button

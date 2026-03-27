@@ -98,8 +98,8 @@ export function useMutation(withAuthHeaders: boolean = true) {
         const { data, error: apiError } = await fn(client);
         if (apiError) throw new Error(String(apiError));
         return data ?? null;
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError((err as Error).message);
         return null;
       } finally {
         setLoading(false);

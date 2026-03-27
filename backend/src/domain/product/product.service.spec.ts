@@ -254,14 +254,15 @@ describe('ProductService', () => {
   });
 
   describe('deleteProduct', () => {
-    it('deletes with composite where', async () => {
-      const deleted = { id: 'p1' } as any;
-      (prisma.product.delete as jest.Mock).mockResolvedValue(deleted);
+    it('soft-deletes by setting active to false', async () => {
+      const deleted = { id: 'p1', active: false } as any;
+      (prisma.product.update as jest.Mock).mockResolvedValue(deleted);
 
       const res = await service.deleteProduct('org-1', 'p1');
 
-      expect(prisma.product.delete).toHaveBeenCalledWith({
+      expect(prisma.product.update).toHaveBeenCalledWith({
         where: { organizationId: 'org-1', id: 'p1' },
+        data: { active: false },
       });
       expect(res).toBe(deleted);
     });

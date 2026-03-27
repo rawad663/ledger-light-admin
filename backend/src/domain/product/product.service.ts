@@ -142,8 +142,9 @@ export class ProductService {
   }
 
   async deleteProduct(organizationId: string, productId: string) {
-    return this.prismaService.product.delete({
+    return this.prismaService.product.update({
       where: { organizationId, id: productId },
+      data: { active: false },
     });
   }
 }

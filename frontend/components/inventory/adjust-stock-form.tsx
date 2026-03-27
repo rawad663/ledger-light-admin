@@ -45,6 +45,7 @@ import {
 
 type LocationDto = components["schemas"]["LocationDto"];
 type ProductDto = components["schemas"]["ProductDto"];
+type Reason = components["schemas"]["InventoryAdjustmentDto"]["reason"];
 
 const REASON_LABELS: Record<string, string> = {
   MANUAL: "Manual",
@@ -267,7 +268,7 @@ export function AdjustStockForm({
         productId,
         locationId,
         delta: values.delta,
-        reason: values.reason as any,
+        reason: values.reason as Reason,
         note: values.note || undefined,
       },
     });
@@ -275,7 +276,7 @@ export function AdjustStockForm({
     setSubmitting(false);
 
     if (error) {
-      setApiError((error as any)?.message ?? "Failed to create adjustment");
+      setApiError((error as Error)?.message ?? "Failed to create adjustment");
       return;
     }
 
