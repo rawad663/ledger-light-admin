@@ -408,7 +408,7 @@ export function ProductsPage({
         }}
         product={deleteProduct}
         onSuccess={() => {
-          toast({ title: "Product deleted" });
+          toast({ title: "Product deactivated" });
           router.refresh();
         }}
       />
