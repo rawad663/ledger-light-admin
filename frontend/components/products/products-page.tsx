@@ -45,6 +45,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty } from "@/components/ui/empty";
 import { CreateProductForm } from "@/components/products/create-product-form";
+import { EditProductForm } from "@/components/products/edit-product-form";
+import { DeleteProductDialog } from "@/components/products/delete-product-dialog";
 import { toast } from "@/hooks/use-toast";
 
 const inventoryColors: Record<string, string> = {
@@ -95,6 +97,11 @@ export function ProductsPage({
   const { searchParams, searchInput, setSearchInput, updateParams } =
     useUrlSearch(initialSearch);
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [editProduct, setEditProduct] = React.useState<Product | null>(null);
+  const [deleteProduct, setDeleteProduct] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const search = searchParams.get("search") ?? "";
   const categoryFilter = searchParams.get("category") ?? "all";
@@ -307,10 +314,26 @@ export function ProductsPage({
                               View details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Edit product</DropdownMenuItem>
-                          <DropdownMenuItem>Duplicate</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const original = products.find(
+                                (p) => p.id === product.id,
+                              );
+                              if (original) setEditProduct(original);
+                            }}
+                          >
+                            Edit product
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() =>
+                              setDeleteProduct({
+                                id: product.id,
+                                name: product.name,
+                              })
+                            }
+                          >
                             Delete product
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -361,6 +384,31 @@ export function ProductsPage({
         categories={categories}
         onSuccess={() => {
           toast({ title: "Product created" });
+          router.refresh();
+        }}
+      />
+
+      <EditProductForm
+        open={!!editProduct}
+        onOpenChange={(open) => {
+          if (!open) setEditProduct(null);
+        }}
+        product={editProduct}
+        categories={categories}
+        onSuccess={() => {
+          toast({ title: "Product updated" });
+          router.refresh();
+        }}
+      />
+
+      <DeleteProductDialog
+        open={!!deleteProduct}
+        onOpenChange={(open) => {
+          if (!open) setDeleteProduct(null);
+        }}
+        product={deleteProduct}
+        onSuccess={() => {
+          toast({ title: "Product deleted" });
           router.refresh();
         }}
       />

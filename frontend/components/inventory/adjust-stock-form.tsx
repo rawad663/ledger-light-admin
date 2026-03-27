@@ -102,7 +102,13 @@ function ProductCombobox({
     let cancelled = false;
     apiClient
       .GET("/products", {
-        params: { query: { limit: 100, search: debouncedSearch || undefined } },
+        params: {
+          query: {
+            limit: 100,
+            search: debouncedSearch || undefined,
+            isActive: true,
+          },
+        },
       })
       .then(({ data }) => {
         if (!cancelled) setProducts(data?.data ?? []);
@@ -228,7 +234,11 @@ export function AdjustStockForm({
       setApiError(null);
       setProductError(null);
       setLocationError(null);
-      form.reset({ delta: undefined as unknown as number, reason: "MANUAL", note: "" });
+      form.reset({
+        delta: undefined as unknown as number,
+        reason: "MANUAL",
+        note: "",
+      });
     }
   }, [open, defaultProductId, defaultProductName, defaultLocationId, form]);
 
@@ -265,9 +275,7 @@ export function AdjustStockForm({
     setSubmitting(false);
 
     if (error) {
-      setApiError(
-        (error as any)?.message ?? "Failed to create adjustment",
-      );
+      setApiError((error as any)?.message ?? "Failed to create adjustment");
       return;
     }
 
@@ -310,7 +318,13 @@ export function AdjustStockForm({
             {/* Location */}
             <div className="space-y-2">
               <FormLabel>Location</FormLabel>
-              <Select value={locationId} onValueChange={(v) => { setLocationId(v); setLocationError(null); }}>
+              <Select
+                value={locationId}
+                onValueChange={(v) => {
+                  setLocationId(v);
+                  setLocationError(null);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select location..." />
                 </SelectTrigger>
@@ -396,9 +410,7 @@ export function AdjustStockForm({
               )}
             />
 
-            {apiError && (
-              <p className="text-sm text-destructive">{apiError}</p>
-            )}
+            {apiError && <p className="text-sm text-destructive">{apiError}</p>}
 
             <div className="flex gap-2 pt-2">
               <Button
