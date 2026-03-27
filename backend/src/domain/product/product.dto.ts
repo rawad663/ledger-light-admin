@@ -1,5 +1,5 @@
 // ...existing code...
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -111,6 +111,16 @@ export class ProductQueryParamDto extends PaginationOptionsQueryParamDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (typeof value === 'boolean') return value;
+
+    return value === 'true';
+  })
+  isActive?: boolean;
 }
 
 export class GetProductsResponseDto extends createPaginatedResponseDto(

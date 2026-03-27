@@ -24,7 +24,10 @@ export class CustomerService {
   ): Promise<GetCustomersResponseDto> {
     const { search, ...paginationQuery } = query;
 
-    const where: Prisma.CustomerWhereInput = { organizationId };
+    const where: Prisma.CustomerWhereInput = {
+      organizationId,
+      status: query.status,
+    };
 
     if (search) {
       where.OR = [

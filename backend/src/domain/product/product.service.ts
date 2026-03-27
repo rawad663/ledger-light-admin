@@ -25,7 +25,10 @@ export class ProductService {
     organizationId: string,
     query: ProductQueryParamDto,
   ): Promise<GetProductsResponseDto> {
-    const where: Prisma.ProductWhereInput = { organizationId };
+    const where: Prisma.ProductWhereInput = {
+      organizationId,
+      active: query.isActive,
+    };
 
     if (query.search) {
       where.OR = [
