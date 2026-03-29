@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Printer,
@@ -46,11 +47,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { OrderProductCombobox } from "@/components/orders/order-product-combobox";
 
 type OrderDetail = components["schemas"]["OrderDetailDto"];
 type AuditLog = components["schemas"]["AuditLogDto"];
+type OrderStatus = components["schemas"]["OrderDto"]["status"];
 
 interface OrderDetailPageProps {
   order: OrderDetail;
@@ -115,6 +127,69 @@ function getActorName(actor: AuditLog["actor"]): string {
   return parts.length > 0 ? parts.join(" ") : actor.email;
 }
 
+const transitionActions: Record<
+  OrderStatus,
+  Array<{
+    toStatus: OrderStatus;
+    label: string;
+    icon: React.ElementType;
+    variant: "default" | "outline" | "destructive";
+    requiresConfirmation: boolean;
+  }>
+> = {
+  PENDING: [
+    {
+      toStatus: "CONFIRMED",
+      label: "Confirm Order",
+      icon: CheckCircle2,
+      variant: "default",
+      requiresConfirmation: false,
+    },
+    {
+      toStatus: "CANCELLED",
+      label: "Cancel Order",
+      icon: XCircle,
+      variant: "destructive",
+      requiresConfirmation: true,
+    },
+  ],
+  CONFIRMED: [
+    {
+      toStatus: "FULFILLED",
+      label: "Fulfill Order",
+      icon: CheckCircle2,
+      variant: "default",
+      requiresConfirmation: false,
+    },
+    {
+      toStatus: "CANCELLED",
+      label: "Cancel Order",
+      icon: XCircle,
+      variant: "destructive",
+      requiresConfirmation: true,
+    },
+  ],
+  CANCELLED: [
+    {
+      toStatus: "PENDING",
+      label: "Reopen Order",
+      icon: RefreshCw,
+      variant: "outline",
+      requiresConfirmation: true,
+    },
+  ],
+  FULFILLED: [
+    {
+      toStatus: "REFUNDED",
+      label: "Refund Order",
+      icon: RefreshCw,
+      variant: "destructive",
+      requiresConfirmation: true,
+    },
+  ],
+  REFUNDED: [],
+};
+
 function dollarsToCents(dollars: string): number {
   const num = parseFloat(dollars);
   if (Number.isNaN(num) || num < 0) return 0;
@@ -122,11 +197,18 @@ function dollarsToCents(dollars: string): number {
 }
 
 export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
+  const router = useRouter();
   const apiClient = useApiClient();
   const [currentOrder, setCurrentOrder] = React.useState(order);
   const [showAddItemForm, setShowAddItemForm] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submittingItem, setSubmittingItem] = React.useState(false);
+  const [transitioningTo, setTransitioningTo] =
+    React.useState<OrderStatus | null>(null);
+  const [confirmTransition, setConfirmTransition] = React.useState<{
+    toStatus: OrderStatus;
+    label: string;
+  } | null>(null);
   const [removingItemId, setRemovingItemId] = React.useState<string | null>(
     null,
   );
@@ -146,6 +228,7 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
 
   const isPending = currentOrder.status === "PENDING";
   const canRemoveItems = isPending && (currentOrder.items?.length ?? 0) > 1;
+  const availableTransitions = transitionActions[currentOrder.status] ?? [];
 
   function resetNewItemForm() {
     setNewItem({
@@ -284,73 +367,194 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
     }
   }
 
+  async function performTransition(toStatus: OrderStatus) {
+    setTransitioningTo(toStatus);
+    setSubmitError(null);
+
+    const { data, error } = await apiClient.POST(
+      "/orders/{id}/transition-status",
+      {
+        params: { path: { id: currentOrder.id } },
+        body: { toStatus },
+      },
+    );
+
+    setTransitioningTo(null);
+    setConfirmTransition(null);
+
+    if (error) {
+      const message = (error as Error)?.message ?? "Failed to update status";
+      setSubmitError(message);
+      toast({
+        title: "Could not update order",
+        description: message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (data) {
+      setCurrentOrder((prev) => ({
+        ...prev,
+        ...data,
+      }));
+      toast({ title: `Order marked as ${formatStatus(data.status)}` });
+      router.refresh();
+    }
+  }
+
+  function handleTransitionAction(action: {
+    toStatus: OrderStatus;
+    label: string;
+    requiresConfirmation: boolean;
+  }) {
+    if (action.requiresConfirmation) {
+      setConfirmTransition({
+        toStatus: action.toStatus,
+        label: action.label,
+      });
+      return;
+    }
+
+    void performTransition(action.toStatus);
+  }
+
+  function getTransitionDescription() {
+    if (!confirmTransition) return "";
+
+    if (confirmTransition.toStatus === "CANCELLED") {
+      return "This will cancel the order and record a cancellation timestamp.";
+    }
+
+    if (confirmTransition.toStatus === "REFUNDED") {
+      return "This will mark the order as refunded. Make sure any financial refund has been handled before continuing.";
+    }
+
+    return "This will reopen the order and move it back to pending so it can be edited and processed again.";
+  }
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/orders">
-              <ArrowLeft className="size-4" />
-              <span className="sr-only">Back to orders</span>
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                {formatOrderId(order.id)}
-              </h1>
-              <Badge
-                variant="outline"
-                className={cn("font-medium", statusColors[currentOrder.status])}
-              >
-                {formatStatus(currentOrder.status)}
-              </Badge>
+    <>
+      <AlertDialog
+        open={!!confirmTransition}
+        onOpenChange={(open) => {
+          if (!open && !transitioningTo) {
+            setConfirmTransition(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmTransition?.label}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {getTransitionDescription()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!transitioningTo}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                if (confirmTransition) {
+                  void performTransition(confirmTransition.toStatus);
+                }
+              }}
+              disabled={!!transitioningTo}
+            >
+              {transitioningTo && (
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              )}
+              {confirmTransition?.label}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="p-6 space-y-6">
+        {/* Page Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/orders">
+                <ArrowLeft className="size-4" />
+                <span className="sr-only">Back to orders</span>
+              </Link>
+            </Button>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  {formatOrderId(currentOrder.id)}
+                </h1>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "font-medium",
+                    statusColors[currentOrder.status],
+                  )}
+                >
+                  {formatStatus(currentOrder.status)}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Created on {formatDate(currentOrder.createdAt)}
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Created on {formatDate(currentOrder.createdAt)}
-            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Printer className="mr-1.5 size-4" />
+              Print Receipt
+            </Button>
+            {availableTransitions.map((action) => {
+              const Icon = action.icon;
+              const isLoading = transitioningTo === action.toStatus;
+
+              return (
+                <Button
+                  key={action.toStatus}
+                  variant={action.variant}
+                  size="sm"
+                  disabled={!!transitioningTo}
+                  onClick={() => handleTransitionAction(action)}
+                >
+                  {isLoading ? (
+                    <Loader2 className="mr-1.5 size-4 animate-spin" />
+                  ) : (
+                    <Icon className="mr-1.5 size-4" />
+                  )}
+                  {action.label}
+                </Button>
+              );
+            })}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="size-4" />
+                  <span className="sr-only">More actions</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>Edit order</DropdownMenuItem>
+                <DropdownMenuItem>Duplicate order</DropdownMenuItem>
+                <DropdownMenuItem>Send invoice</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive">
+                  Delete order
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Printer className="mr-1.5 size-4" />
-            Print Receipt
-          </Button>
-          <Button variant="outline" size="sm">
-            <XCircle className="mr-1.5 size-4" />
-            Cancel Order
-          </Button>
-          <Button size="sm">
-            <CheckCircle2 className="mr-1.5 size-4" />
-            Mark as Placed
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="size-4" />
-                <span className="sr-only">More actions</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>Edit order</DropdownMenuItem>
-              <DropdownMenuItem>Duplicate order</DropdownMenuItem>
-              <DropdownMenuItem>Send invoice</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
-                Delete order
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Order Items & Pricing */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Order Items */}
-          <Card>
+        {/* Main Content */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Left Column - Order Items & Pricing */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Order Items */}
+            <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-base">Order Items</CardTitle>
@@ -589,45 +793,81 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                 </div>
               )}
             </CardContent>
-          </Card>
+            </Card>
 
-          {/* Pricing Summary */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Pricing Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCents(currentOrder.subtotalCents)}</span>
+            {/* Pricing Summary */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Pricing Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatCents(currentOrder.subtotalCents)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="text-destructive">
+                      -{formatCents(currentOrder.discountCents)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Tax</span>
+                    <span>{formatCents(currentOrder.taxCents)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between font-medium">
+                    <span>Total</span>
+                    <span className="text-lg">
+                      {formatCents(currentOrder.totalCents)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Discount</span>
-                  <span className="text-destructive">
-                    -{formatCents(currentOrder.discountCents)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Tax</span>
-                  <span>{formatCents(currentOrder.taxCents)}</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between font-medium">
-                  <span>Total</span>
-                  <span className="text-lg">
-                    {formatCents(currentOrder.totalCents)}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Right Column - Customer, Location, Timeline */}
-        <div className="space-y-6">
-          {/* Customer Info */}
-          <Card>
+          {/* Right Column - Customer, Location, Timeline */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Order Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Current</span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "font-medium",
+                      statusColors[currentOrder.status],
+                    )}
+                  >
+                    {formatStatus(currentOrder.status)}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Created</span>
+                  <span>{formatDate(currentOrder.createdAt)}</span>
+                </div>
+                {currentOrder.placedAt && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Placed</span>
+                    <span>{formatDate(currentOrder.placedAt)}</span>
+                  </div>
+                )}
+                {currentOrder.cancelledAt && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Cancelled</span>
+                    <span>{formatDate(currentOrder.cancelledAt)}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Customer Info */}
+            <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Customer Information</CardTitle>
             </CardHeader>
@@ -666,10 +906,10 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                 </div>
               )}
             </CardContent>
-          </Card>
+            </Card>
 
-          {/* Location Info */}
-          <Card>
+            {/* Location Info */}
+            <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Store Location</CardTitle>
             </CardHeader>
@@ -710,10 +950,10 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                 </div>
               )}
             </CardContent>
-          </Card>
+            </Card>
 
-          {/* Activity Timeline */}
-          <Card>
+            {/* Activity Timeline */}
+            <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Activity Timeline</CardTitle>
             </CardHeader>
@@ -751,9 +991,10 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                 </p>
               )}
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
