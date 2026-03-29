@@ -51,6 +51,7 @@ export class CustomerDto {
   updatedAt: Date;
 
   @IsEnum(CustomerStatus)
+  @ApiProperty({ enum: CustomerStatus })
   status: CustomerStatus;
 
   @IsOptional()
@@ -91,6 +92,11 @@ export class GetCustomersQueryDto extends PaginationOptionsQueryParamDto {
   @IsString()
   @IsOptional()
   search?: string;
+
+  @IsOptional()
+  @IsEnum(CustomerStatus)
+  @ApiProperty({ enum: CustomerStatus })
+  status?: CustomerStatus;
 }
 
 export class CustomerListItemDto extends CustomerDto {

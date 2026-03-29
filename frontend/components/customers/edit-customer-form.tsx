@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 
 import { useApiClient } from "@/hooks/use-api";
+import { type components } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +20,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -26,45 +34,71 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 
-const createCustomerSchema = z.object({
+type CustomerDetail = components["schemas"]["CustomerDetailDto"];
+
+const CUSTOMER_STATUSES = ["ACTIVE", "INACTIVE", "BLOCKED"] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  BLOCKED: "Blocked",
+};
+
+const editCustomerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().min(1, "Email is required").email("Invalid email address"),
   phone: z.string().optional(),
+  status: z.string().min(1, "Status is required"),
   internalNote: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof createCustomerSchema>;
+type FormValues = z.infer<typeof editCustomerSchema>;
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  customer: CustomerDetail | null;
 };
 
-export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
+export function EditCustomerForm({
+  open,
+  onOpenChange,
+  onSuccess,
+  customer,
+}: Props) {
   const apiClient = useApiClient();
   const [submitting, setSubmitting] = React.useState(false);
   const [apiError, setApiError] = React.useState<string | null>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(createCustomerSchema),
+    resolver: zodResolver(editCustomerSchema),
     defaultValues: {
       name: "",
       email: "",
       phone: "",
+      status: "ACTIVE",
       internalNote: "",
     },
   });
 
-  // Reset form when sheet closes
+  // Reset form with customer values when opened
   React.useEffect(() => {
-    if (!open) {
-      form.reset();
+    if (open && customer) {
+      form.reset({
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone ?? "",
+        status: (customer.status as unknown as string) || "ACTIVE",
+        internalNote: customer.internalNote ?? "",
+      });
       setApiError(null);
     }
-  }, [open, form]);
+  }, [open, customer, form]);
 
   async function onSubmit(values: FormValues) {
+    if (!customer) return;
+
     setSubmitting(true);
     setApiError(null);
 
@@ -72,11 +106,13 @@ export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
       name: values.name,
       email: values.email,
       phone: values.phone || null,
+      status: values.status,
       internalNote: values.internalNote || null,
     };
 
-    const { data, error, response } = await apiClient.POST("/customers", {
-      body,
+    const { data, error, response } = await apiClient.PATCH("/customers/{id}", {
+      params: { path: { id: customer.id } },
+      body: body as any,
     });
 
     setSubmitting(false);
@@ -86,7 +122,7 @@ export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
         (error as Error)?.message ??
         (response.status === 409
           ? "A customer with this email already exists"
-          : "Failed to create customer");
+          : "Failed to update customer");
       setApiError(message);
       return;
     }
@@ -101,10 +137,8 @@ export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader className="pb-4">
-          <SheetTitle className="text-xl">Add Customer</SheetTitle>
-          <SheetDescription>
-            Add a new customer to your organization.
-          </SheetDescription>
+          <SheetTitle className="text-xl">Edit Customer</SheetTitle>
+          <SheetDescription>Update customer information.</SheetDescription>
         </SheetHeader>
 
         <Form {...form}>
@@ -157,6 +191,31 @@ export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
 
             <FormField
               control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CUSTOMER_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {STATUS_LABELS[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="internalNote"
               render={({ field }) => (
                 <FormItem>
@@ -188,7 +247,7 @@ export function CreateCustomerForm({ open, onOpenChange, onSuccess }: Props) {
                 {submitting && (
                   <Loader2 className="mr-1.5 size-4 animate-spin" />
                 )}
-                Add Customer
+                Save Changes
               </Button>
             </div>
           </form>

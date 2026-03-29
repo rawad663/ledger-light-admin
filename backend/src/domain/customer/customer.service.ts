@@ -24,7 +24,10 @@ export class CustomerService {
   ): Promise<GetCustomersResponseDto> {
     const { search, ...paginationQuery } = query;
 
-    const where: Prisma.CustomerWhereInput = { organizationId };
+    const where: Prisma.CustomerWhereInput = {
+      organizationId,
+      status: query.status,
+    };
 
     if (search) {
       where.OR = [
@@ -34,7 +37,11 @@ export class CustomerService {
       ];
     }
 
-    const { data: customers, total } = await this.prismaService.paginateMany(
+    const {
+      data: customers,
+      total,
+      nextCursor,
+    } = await this.prismaService.paginateMany(
       this.prismaService.customer,
       { where },
       { ...paginationQuery },
@@ -90,10 +97,7 @@ export class CustomerService {
     return {
       data: enrichedCustomers as GetCustomersResponseDto['data'],
       totalCount: total,
-      nextCursor:
-        customers.length === paginationQuery.limit
-          ? customers[customers.length - 1].id
-          : undefined,
+      nextCursor,
     };
   }
 

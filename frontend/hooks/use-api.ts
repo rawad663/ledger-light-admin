@@ -98,8 +98,8 @@ export function useMutation(withAuthHeaders: boolean = true) {
         const { data, error: apiError } = await fn(client);
         if (apiError) throw new Error(String(apiError));
         return data ?? null;
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError((err as Error).message);
         return null;
       } finally {
         setLoading(false);
@@ -110,37 +110,3 @@ export function useMutation(withAuthHeaders: boolean = true) {
 
   return { mutate, loading, error };
 }
-
-/**
-"use client";
-import { useGet, useMutation } from "@/hooks/use-api";
-
-function ProductList() {
-  // GET — auto-fetches, fully typed from OpenAPI spec
-  const { data, loading } = useGet("/products");
-  const products = data?.data ?? [];
-
-  // Mutations — pass a callback that receives the typed client
-  const { mutate: exec, loading: saving } = useMutation();
-
-  const handleCreate = async () => {
-    const product = await exec((api) =>
-      api.POST("/products", {
-        body: { name: "New", sku: "SKU-1", priceCents: 999 },
-      })
-    );
-  };
-
-  const handleUpdate = async (id: string) => {
-    await exec((api) =>
-      api.PATCH("/products/{id}", {
-        params: { path: { id } },
-        body: { name: "Updated" },
-      })
-    );
-  };
-
-  if (loading) return <Spinner />;
-  // ...
-}
-*/

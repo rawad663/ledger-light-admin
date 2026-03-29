@@ -358,6 +358,7 @@ describe('OrderService', () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: items,
         total: 5,
+        nextCursor: 'ord-2',
       });
 
       const query = {
@@ -411,6 +412,7 @@ describe('OrderService', () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: [],
         total: 0,
+        nextCursor: undefined,
       });
 
       await service.getOrders(orgId, { withItems: false } as any);
@@ -426,6 +428,7 @@ describe('OrderService', () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: [],
         total: 0,
+        nextCursor: undefined,
       });
 
       await service.getOrders(orgId, {

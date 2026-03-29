@@ -79,8 +79,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { user, memberships, currentOrg, currentRole, switchOrganization } =
     useAuth();
 
-  console.log(currentOrg);
-
   const displayName = user ? getDisplayName(user) : "";
   const initials = displayName ? getInitials(displayName) : "";
 

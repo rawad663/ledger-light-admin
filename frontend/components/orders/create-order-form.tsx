@@ -105,7 +105,13 @@ function CustomerCombobox({
     let cancelled = false;
     apiClient
       .GET("/customers", {
-        params: { query: { limit: 100, search: debouncedSearch || undefined } },
+        params: {
+          query: {
+            limit: 100,
+            search: debouncedSearch || undefined,
+            status: "ACTIVE",
+          },
+        },
       })
       .then(({ data }) => {
         if (!cancelled) {
@@ -214,7 +220,13 @@ function ProductCombobox({
     let cancelled = false;
     apiClient
       .GET("/products", {
-        params: { query: { limit: 100, search: debouncedSearch || undefined } },
+        params: {
+          query: {
+            limit: 100,
+            search: debouncedSearch || undefined,
+            isActive: true,
+          },
+        },
       })
       .then(({ data }) => {
         if (!cancelled) {
@@ -391,8 +403,14 @@ export function CreateOrderForm({
     return lineSubtotal(item) - lineDiscount(item) + lineTax(item);
   }
 
-  const orderSubtotal = lineItems.reduce((sum, li) => sum + lineSubtotal(li), 0);
-  const orderDiscount = lineItems.reduce((sum, li) => sum + lineDiscount(li), 0);
+  const orderSubtotal = lineItems.reduce(
+    (sum, li) => sum + lineSubtotal(li),
+    0,
+  );
+  const orderDiscount = lineItems.reduce(
+    (sum, li) => sum + lineDiscount(li),
+    0,
+  );
   const orderTax = lineItems.reduce((sum, li) => sum + lineTax(li), 0);
   const orderTotal = orderSubtotal - orderDiscount + orderTax;
 
@@ -404,7 +422,8 @@ export function CreateOrderForm({
     }
     lineItems.forEach((item, i) => {
       if (!item.productId) errors.push(`Line ${i + 1}: select a product.`);
-      if (item.qty < 1) errors.push(`Line ${i + 1}: quantity must be at least 1.`);
+      if (item.qty < 1)
+        errors.push(`Line ${i + 1}: quantity must be at least 1.`);
       if (lineDiscount(item) > lineSubtotal(item)) {
         errors.push(`Line ${i + 1}: discount cannot exceed subtotal.`);
       }
@@ -437,7 +456,7 @@ export function CreateOrderForm({
     setSubmitting(false);
 
     if (error) {
-      setApiError((error as any)?.message ?? "Failed to create order");
+      setApiError((error as Error)?.message ?? "Failed to create order");
       return;
     }
 
@@ -513,10 +532,7 @@ export function CreateOrderForm({
             )}
 
             {lineItems.map((item, index) => (
-              <div
-                key={item.key}
-                className="rounded-md border p-3 space-y-3"
-              >
+              <div key={item.key} className="rounded-md border p-3 space-y-3">
                 <div className="flex items-start gap-2">
                   <div className="flex-1">
                     <ProductCombobox
@@ -663,9 +679,7 @@ export function CreateOrderForm({
               disabled={submitting}
               onClick={handleSubmit}
             >
-              {submitting && (
-                <Loader2 className="mr-1.5 size-4 animate-spin" />
-              )}
+              {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
               Create Order
             </Button>
           </div>

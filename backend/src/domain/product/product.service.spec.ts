@@ -47,7 +47,11 @@ describe('ProductService', () => {
         { id: '1', createdAt: new Date() },
         { id: '2', createdAt: new Date() },
       ] as any[];
-      prisma.paginateMany.mockResolvedValue({ data: items, total: 8 });
+      prisma.paginateMany.mockResolvedValue({
+        data: items,
+        total: 8,
+        nextCursor: '2',
+      });
 
       const res = await service.getProducts('org-1', {
         limit: 2,
@@ -71,7 +75,11 @@ describe('ProductService', () => {
 
     it('uses provided sort and omits nextCursor on last page', async () => {
       const items = [{ id: '1', createdAt: new Date() }] as any[];
-      prisma.paginateMany.mockResolvedValue({ data: items, total: 10 });
+      prisma.paginateMany.mockResolvedValue({
+        data: items,
+        total: 10,
+        nextCursor: undefined,
+      });
 
       const res = await service.getProducts('org-1', {
         limit: 2,
@@ -94,7 +102,11 @@ describe('ProductService', () => {
     });
 
     it('applies search filter to where clause', async () => {
-      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
 
       await service.getProducts('org-1', {
         limit: 20,
@@ -117,7 +129,11 @@ describe('ProductService', () => {
     });
 
     it('applies category filter to where clause', async () => {
-      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
 
       await service.getProducts('org-1', {
         limit: 20,
@@ -254,14 +270,15 @@ describe('ProductService', () => {
   });
 
   describe('deleteProduct', () => {
-    it('deletes with composite where', async () => {
-      const deleted = { id: 'p1' } as any;
-      (prisma.product.delete as jest.Mock).mockResolvedValue(deleted);
+    it('soft-deletes by setting active to false', async () => {
+      const deleted = { id: 'p1', active: false } as any;
+      (prisma.product.update as jest.Mock).mockResolvedValue(deleted);
 
       const res = await service.deleteProduct('org-1', 'p1');
 
-      expect(prisma.product.delete).toHaveBeenCalledWith({
+      expect(prisma.product.update).toHaveBeenCalledWith({
         where: { organizationId: 'org-1', id: 'p1' },
+        data: { active: false },
       });
       expect(res).toBe(deleted);
     });

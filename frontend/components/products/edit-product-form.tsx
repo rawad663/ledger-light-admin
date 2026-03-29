@@ -10,6 +10,7 @@ import { useApiClient } from "@/hooks/use-api";
 import { type components } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Form,
   FormControl,
@@ -32,84 +33,57 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 
-type LocationDto = components["schemas"]["LocationDto"];
+type ProductDto = components["schemas"]["ProductDto"];
 
-const createProductSchema = z
-  .object({
-    name: z.string().min(1, "Name is required"),
-    sku: z.string().min(1, "SKU is required"),
-    price: z
-      .string()
-      .min(1, "Price is required")
-      .refine(
-        (val) => {
-          const num = parseFloat(val);
-          return !isNaN(num) && num > 0;
-        },
-        { message: "Price must be a positive number" },
-      ),
-    category: z.string().optional(),
-    customCategory: z.string().optional(),
-    locationId: z.string().optional(),
-    quantity: z.string().optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.locationId && !data.quantity) return false;
-      if (data.quantity && !data.locationId) return false;
-      return true;
-    },
-    {
-      message: "Both location and quantity are required for initial inventory",
-      path: ["quantity"],
-    },
-  )
-  .refine(
-    (data) => {
-      if (data.quantity) {
-        const num = parseInt(data.quantity, 10);
-        return !isNaN(num) && num > 0;
-      }
-      return true;
-    },
-    {
-      message: "Quantity must be a positive whole number",
-      path: ["quantity"],
-    },
-  );
+const editProductSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  sku: z.string().min(1, "SKU is required"),
+  price: z
+    .string()
+    .min(1, "Price is required")
+    .refine(
+      (val) => {
+        const num = parseFloat(val);
+        return !isNaN(num) && num >= 0;
+      },
+      { message: "Price must be a non-negative number" },
+    ),
+  category: z.string().optional(),
+  customCategory: z.string().optional(),
+  active: z.boolean(),
+});
 
-type FormValues = z.infer<typeof createProductSchema>;
+type FormValues = z.infer<typeof editProductSchema>;
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  product: ProductDto | null;
   categories: string[];
 };
 
-export function CreateProductForm({
+export function EditProductForm({
   open,
   onOpenChange,
   onSuccess,
+  product,
   categories,
 }: Props) {
   const apiClient = useApiClient();
   const [submitting, setSubmitting] = React.useState(false);
   const [apiError, setApiError] = React.useState<string | null>(null);
-  const [locations, setLocations] = React.useState<LocationDto[]>([]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(createProductSchema),
+    resolver: zodResolver(editProductSchema),
     defaultValues: {
       name: "",
       sku: "",
       price: "",
       category: "",
       customCategory: "",
-      locationId: "",
-      quantity: "",
+      active: true,
     },
   });
 
@@ -118,35 +92,27 @@ export function CreateProductForm({
     name: "category",
   });
 
-  // Fetch locations when sheet opens
+  // Reset form with product values when opened
   React.useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
+    if (open && product) {
+      const productCategory = product.category ?? "";
+      const isCustom = productCategory && !categories.includes(productCategory);
 
-    apiClient
-      .GET("/inventory/levels", {
-        params: { query: { limit: 1 } },
-      })
-      .then(({ data }) => {
-        if (!cancelled && data?.locations) {
-          setLocations(data.locations);
-        }
+      form.reset({
+        name: product.name,
+        sku: product.sku,
+        price: (product.priceCents / 100).toFixed(2),
+        category: isCustom ? "__other__" : productCategory,
+        customCategory: isCustom ? productCategory : "",
+        active: product.active,
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, apiClient]);
-
-  // Reset form when sheet closes
-  React.useEffect(() => {
-    if (!open) {
-      form.reset();
       setApiError(null);
     }
-  }, [open, form]);
+  }, [open, product, categories, form]);
 
   async function onSubmit(values: FormValues) {
+    if (!product) return;
+
     setSubmitting(true);
     setApiError(null);
 
@@ -156,21 +122,23 @@ export function CreateProductForm({
         ? values.customCategory?.trim() || null
         : values.category || null;
 
-    const body: components["schemas"]["CreateProductDto"] = {
-      name: values.name,
-      sku: values.sku,
-      priceCents,
-      category: resolvedCategory,
-    };
+    const body: components["schemas"]["UpdateProductDto"] = {};
 
-    if (values.locationId && values.quantity) {
-      body.inventory = {
-        locationId: values.locationId,
-        quantity: parseInt(values.quantity, 10),
-      };
+    if (values.name !== product.name) body.name = values.name;
+    if (values.sku !== product.sku) body.sku = values.sku;
+    if (priceCents !== product.priceCents) body.priceCents = priceCents;
+    if (resolvedCategory !== (product.category ?? null))
+      body.category = resolvedCategory;
+    if (values.active !== product.active) body.active = values.active;
+
+    // Nothing changed
+    if (Object.keys(body).length === 0) {
+      onOpenChange(false);
+      return;
     }
 
-    const { data, error, response } = await apiClient.POST("/products", {
+    const { data, error, response } = await apiClient.PATCH("/products/{id}", {
+      params: { path: { id: product.id } },
       body,
     });
 
@@ -181,7 +149,7 @@ export function CreateProductForm({
         (error as Error)?.message ??
         (response.status === 409
           ? "A product with this SKU already exists"
-          : "Failed to create product");
+          : "Failed to update product");
       setApiError(message);
       return;
     }
@@ -196,9 +164,9 @@ export function CreateProductForm({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader className="pb-4">
-          <SheetTitle className="text-xl">Add Product</SheetTitle>
+          <SheetTitle className="text-xl">Edit Product</SheetTitle>
           <SheetDescription>
-            Create a new product in your catalog.
+            Update the details of this product.
           </SheetDescription>
         </SheetHeader>
 
@@ -302,58 +270,28 @@ export function CreateProductForm({
               />
             )}
 
-            <Separator />
-
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                Initial Inventory (optional)
-              </p>
-
-              <FormField
-                control={form.control}
-                name="locationId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a location" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations.map((loc) => (
-                          <SelectItem key={loc.id} value={loc.id}>
-                            {loc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="1"
-                        step="1"
-                        placeholder="0"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="active"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <FormLabel className="text-sm font-medium">
+                      Active
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Inactive products are hidden from new orders.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             {apiError && <p className="text-sm text-destructive">{apiError}</p>}
 
@@ -370,7 +308,7 @@ export function CreateProductForm({
                 {submitting && (
                   <Loader2 className="mr-1.5 size-4 animate-spin" />
                 )}
-                Create Product
+                Save Changes
               </Button>
             </div>
           </form>

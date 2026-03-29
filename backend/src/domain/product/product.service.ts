@@ -25,7 +25,10 @@ export class ProductService {
     organizationId: string,
     query: ProductQueryParamDto,
   ): Promise<GetProductsResponseDto> {
-    const where: Prisma.ProductWhereInput = { organizationId };
+    const where: Prisma.ProductWhereInput = {
+      organizationId,
+      active: query.isActive,
+    };
 
     if (query.search) {
       where.OR = [
@@ -38,24 +41,25 @@ export class ProductService {
       where.category = query.category;
     }
 
-    const [{ data: products, total }, distinctCategories] = await Promise.all([
-      this.prismaService.paginateMany(
-        this.prismaService.product,
-        { where },
-        {
-          limit: query.limit,
-          cursor: query.cursor,
-          orderBy: query.sortBy
-            ? { [query.sortBy]: query.sortOrder || 'desc' }
-            : { createdAt: 'desc' },
-        },
-      ),
-      this.prismaService.product.findMany({
-        where: { organizationId },
-        select: { category: true },
-        distinct: ['category'],
-      }),
-    ]);
+    const [{ data: products, total, nextCursor }, distinctCategories] =
+      await Promise.all([
+        this.prismaService.paginateMany(
+          this.prismaService.product,
+          { where },
+          {
+            limit: query.limit,
+            cursor: query.cursor,
+            orderBy: query.sortBy
+              ? { [query.sortBy]: query.sortOrder || 'desc' }
+              : { createdAt: 'desc' },
+          },
+        ),
+        this.prismaService.product.findMany({
+          where: { organizationId },
+          select: { category: true },
+          distinct: ['category'],
+        }),
+      ]);
 
     return {
       data: products,
@@ -64,10 +68,7 @@ export class ProductService {
         .map((p) => p.category)
         .filter((c): c is string => c !== null)
         .sort(),
-      nextCursor:
-        products.length === query.limit
-          ? products[products.length - 1].id
-          : undefined,
+      nextCursor,
     };
   }
 
@@ -139,8 +140,9 @@ export class ProductService {
   }
 
   async deleteProduct(organizationId: string, productId: string) {
-    return this.prismaService.product.delete({
+    return this.prismaService.product.update({
       where: { organizationId, id: productId },
+      data: { active: false },
     });
   }
 }

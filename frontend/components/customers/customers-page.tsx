@@ -50,6 +50,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { CreateCustomerForm } from "@/components/customers/create-customer-form";
+import { EditCustomerForm } from "@/components/customers/edit-customer-form";
+import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
 import { CreateOrderForm } from "@/components/orders/create-order-form";
 
 type Customer = components["schemas"]["CustomerListItemDto"];
@@ -114,6 +116,13 @@ export function CustomersPage({
     useUrlSearch(initialSearch);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [createOrderOpen, setCreateOrderOpen] = React.useState(false);
+  const [editCustomer, setEditCustomer] = React.useState<CustomerDetail | null>(
+    null,
+  );
+  const [deleteCustomer, setDeleteCustomer] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const search = searchParams.get("search") ?? "";
 
@@ -141,6 +150,8 @@ export function CustomersPage({
               limit: CUSTOMERS_PAGE_LIMIT,
               cursor,
               search: search || undefined,
+              sortBy: "updatedAt",
+              sortOrder: "desc",
             },
           },
         });
@@ -216,6 +227,7 @@ export function CustomersPage({
               <TableHead className="w-[250px]">Customer</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Lifetime Spend</TableHead>
               <TableHead className="text-right">Avg. Order</TableHead>
               <TableHead className="text-center">Orders</TableHead>
@@ -265,6 +277,9 @@ export function CustomersPage({
                   <TableCell className="text-muted-foreground">
                     {customer.phone ?? "—"}
                   </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {customer.status ?? "—"}
+                  </TableCell>
                   <TableCell className="text-right font-medium">
                     {formatCents(customer.lifetimeSpendCents)}
                   </TableCell>
@@ -300,10 +315,37 @@ export function CustomersPage({
                         >
                           View profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Edit customer</DropdownMenuItem>
-                        <DropdownMenuItem>Create order</DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={async (e) => {
+                            e.stopPropagation();
+
+                            const { data } = await apiClient.GET(
+                              "/customers/{id}",
+                              { params: { path: { id: customer.id } } },
+                            );
+                            if (data) setEditCustomer(data);
+                          }}
+                        >
+                          Edit customer
+                        </DropdownMenuItem>
+                        {customer.status === "ACTIVE" && (
+                          <DropdownMenuItem
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Create order
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteCustomer({
+                              id: customer.id,
+                              name: customer.name,
+                            });
+                          }}
+                        >
                           Delete customer
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -369,6 +411,7 @@ export function CustomersPage({
                     </SheetTitle>
                     <SheetDescription>
                       Customer since {formatDate(selectedCustomer.createdAt)}
+                      <br /> - {selectedCustomer.status}
                     </SheetDescription>
                   </div>
                 </div>
@@ -485,11 +528,19 @@ export function CustomersPage({
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-4">
-                  <Button className="flex-1" variant="outline">
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    onClick={() => {
+                      setEditCustomer(selectedCustomer);
+                      setSelectedCustomer(null);
+                    }}
+                  >
                     Edit Customer
                   </Button>
                   <Button
                     className="flex-1"
+                    disabled={selectedCustomer.status !== "ACTIVE"}
                     onClick={() => {
                       setOrderCustomer({
                         id: selectedCustomer.id,
@@ -523,6 +574,30 @@ export function CustomersPage({
         defaultCustomerId={orderCustomer?.id}
         defaultCustomerName={orderCustomer?.name}
         onSuccess={(orderId) => router.push(`/orders/${orderId}`)}
+      />
+
+      <EditCustomerForm
+        open={!!editCustomer}
+        onOpenChange={(open) => {
+          if (!open) setEditCustomer(null);
+        }}
+        customer={editCustomer}
+        onSuccess={() => {
+          toast({ title: "Customer updated" });
+          router.refresh();
+        }}
+      />
+
+      <DeleteCustomerDialog
+        open={!!deleteCustomer}
+        onOpenChange={(open) => {
+          if (!open) setDeleteCustomer(null);
+        }}
+        customer={deleteCustomer}
+        onSuccess={() => {
+          toast({ title: "Customer deleted" });
+          router.refresh();
+        }}
       />
     </div>
   );
