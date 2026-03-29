@@ -29,6 +29,7 @@ describe('AuditLogService', () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: items,
         total: 5,
+        nextCursor: 'log-2',
       });
 
       const result = await service.getAuditLogs(orgId, { limit: 2 } as any);
@@ -63,6 +64,7 @@ describe('AuditLogService', () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: [],
         total: 0,
+        nextCursor: undefined,
       });
 
       await service.getAuditLogs(orgId, {
@@ -86,6 +88,7 @@ describe('AuditLogService', () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: [],
         total: 0,
+        nextCursor: undefined,
       });
 
       await service.getAuditLogs(orgId, {
@@ -109,6 +112,7 @@ describe('AuditLogService', () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: [],
         total: 0,
+        nextCursor: undefined,
       });
 
       await service.getAuditLogs(orgId, {
@@ -134,6 +138,7 @@ describe('AuditLogService', () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: [{ id: 'log-1' }],
         total: 1,
+        nextCursor: undefined,
       });
 
       const result = await service.getAuditLogs(orgId, { limit: 20 } as any);

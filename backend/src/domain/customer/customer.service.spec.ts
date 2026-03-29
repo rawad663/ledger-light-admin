@@ -29,7 +29,11 @@ describe('CustomerService', () => {
         { id: 'c1', createdAt: new Date() },
         { id: 'c2', createdAt: new Date() },
       ] as any[];
-      prisma.paginateMany.mockResolvedValue({ data: items, total: 10 });
+      prisma.paginateMany.mockResolvedValue({
+        data: items,
+        total: 10,
+        nextCursor: 'c2',
+      });
 
       (prisma.order.groupBy as jest.Mock).mockResolvedValue([
         {
@@ -77,7 +81,11 @@ describe('CustomerService', () => {
 
     it('omits nextCursor when last page', async () => {
       const items = [{ id: '1', createdAt: new Date() }] as any[];
-      prisma.paginateMany.mockResolvedValue({ data: items, total: 10 });
+      prisma.paginateMany.mockResolvedValue({
+        data: items,
+        total: 10,
+        nextCursor: undefined,
+      });
       (prisma.order.groupBy as jest.Mock).mockResolvedValue([]);
 
       const res = await service.getCustomers(orgId, {
@@ -96,7 +104,11 @@ describe('CustomerService', () => {
     });
 
     it('applies search filter on name, email, and phone', async () => {
-      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
       (prisma.order.groupBy as jest.Mock).mockResolvedValue([]);
 
       await service.getCustomers(orgId, {
@@ -121,7 +133,11 @@ describe('CustomerService', () => {
     });
 
     it('skips groupBy when no customers returned', async () => {
-      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
 
       const res = await service.getCustomers(orgId, { limit: 20 } as any);
 

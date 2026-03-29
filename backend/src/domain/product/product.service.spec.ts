@@ -47,7 +47,11 @@ describe('ProductService', () => {
         { id: '1', createdAt: new Date() },
         { id: '2', createdAt: new Date() },
       ] as any[];
-      prisma.paginateMany.mockResolvedValue({ data: items, total: 8 });
+      prisma.paginateMany.mockResolvedValue({
+        data: items,
+        total: 8,
+        nextCursor: '2',
+      });
 
       const res = await service.getProducts('org-1', {
         limit: 2,
@@ -71,7 +75,11 @@ describe('ProductService', () => {
 
     it('uses provided sort and omits nextCursor on last page', async () => {
       const items = [{ id: '1', createdAt: new Date() }] as any[];
-      prisma.paginateMany.mockResolvedValue({ data: items, total: 10 });
+      prisma.paginateMany.mockResolvedValue({
+        data: items,
+        total: 10,
+        nextCursor: undefined,
+      });
 
       const res = await service.getProducts('org-1', {
         limit: 2,
@@ -94,7 +102,11 @@ describe('ProductService', () => {
     });
 
     it('applies search filter to where clause', async () => {
-      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
 
       await service.getProducts('org-1', {
         limit: 20,
@@ -117,7 +129,11 @@ describe('ProductService', () => {
     });
 
     it('applies category filter to where clause', async () => {
-      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
 
       await service.getProducts('org-1', {
         limit: 20,

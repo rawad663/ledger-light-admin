@@ -27,6 +27,7 @@ describe('InventoryService', () => {
       prisma.paginateMany.mockResolvedValue({
         data: productsWithInventory.slice(0, 2),
         total: 8,
+        nextCursor: undefined,
       });
 
       const query = {
@@ -94,7 +95,11 @@ describe('InventoryService', () => {
         { id: 'lvl-1', updatedAt: new Date() },
         { id: 'lvl-2', updatedAt: new Date() },
       ] as any[];
-      prisma.paginateMany.mockResolvedValue({ data: items, total: 8 });
+      prisma.paginateMany.mockResolvedValue({
+        data: items,
+        total: 8,
+        nextCursor: 'lvl-2',
+      });
 
       const res = await service.getLevels('org-1', {
         limit: 2,
@@ -130,7 +135,11 @@ describe('InventoryService', () => {
 
     it('uses provided sort, cursor, and filters', async () => {
       const items = [{ id: 'lvl-9', updatedAt: new Date() }] as any[];
-      prisma.paginateMany.mockResolvedValue({ data: items, total: 8 });
+      prisma.paginateMany.mockResolvedValue({
+        data: items,
+        total: 8,
+        nextCursor: undefined,
+      });
 
       const res = await service.getLevels('org-1', {
         limit: 2,
@@ -163,7 +172,11 @@ describe('InventoryService', () => {
     });
 
     it('applies search filter on product name and SKU', async () => {
-      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
 
       await service.getLevels('org-1', {
         limit: 20,
@@ -188,7 +201,11 @@ describe('InventoryService', () => {
     });
 
     it('applies lowStockOnly filter', async () => {
-      prisma.paginateMany.mockResolvedValue({ data: [], total: 0 });
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
 
       await service.getLevels('org-1', {
         limit: 20,
