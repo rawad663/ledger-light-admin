@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CancelOrderDialog } from "@/components/orders/cancel-order-dialog";
+import { EditOrderForm } from "@/components/orders/edit-order-form";
 import { OrderProductCombobox } from "@/components/orders/order-product-combobox";
 
 type OrderDetail = components["schemas"]["OrderDetailDto"];
@@ -207,6 +208,7 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
     React.useState<OrderStatus | null>(null);
   const [showCancelOrderDialog, setShowCancelOrderDialog] =
     React.useState(false);
+  const [showEditOrderForm, setShowEditOrderForm] = React.useState(false);
   const [confirmTransition, setConfirmTransition] = React.useState<{
     toStatus: OrderStatus;
     label: string;
@@ -447,6 +449,22 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
           router.refresh();
         }}
       />
+      <EditOrderForm
+        open={showEditOrderForm}
+        onOpenChange={setShowEditOrderForm}
+        order={currentOrder}
+        onSuccess={({ customer, location }) => {
+          setCurrentOrder((prev) => ({
+            ...prev,
+            customerId: customer?.id ?? null,
+            locationId: location?.id ?? null,
+            customer,
+            location,
+          }));
+          toast({ title: "Order updated" });
+          router.refresh();
+        }}
+      />
 
       <AlertDialog
         open={!!confirmTransition}
@@ -550,7 +568,9 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Edit order</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowEditOrderForm(true)}>
+                  Edit order
+                </DropdownMenuItem>
                 {/* <DropdownMenuItem>Duplicate order</DropdownMenuItem> */}
                 <DropdownMenuItem>Send invoice</DropdownMenuItem>
               </DropdownMenuContent>

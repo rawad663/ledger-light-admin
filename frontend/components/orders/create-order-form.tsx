@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Plus, Trash2, ChevronsUpDown, Check } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { useApiClient } from "@/hooks/use-api";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { type components } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,19 +22,11 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Separator } from "@/components/ui/separator";
+import { OrderCustomerCombobox } from "@/components/orders/order-customer-combobox";
 import { OrderProductCombobox } from "@/components/orders/order-product-combobox";
 
 type LocationDto = components["schemas"]["LocationDto"];
-type CustomerOption = { id: string; name: string; email: string };
 
 type LineItem = {
   key: string;
@@ -70,121 +60,6 @@ function dollarsToCents(dollars: string): number {
 let lineKeyCounter = 0;
 function nextLineKey() {
   return `line-${++lineKeyCounter}`;
-}
-
-// ── Searchable Customer Combobox ───────────────────────────────────────
-function CustomerCombobox({
-  value,
-  valueName,
-  onChange,
-  apiClient,
-}: {
-  value: string;
-  valueName: string;
-  onChange: (id: string, name: string) => void;
-  apiClient: ReturnType<typeof useApiClient>;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const [search, setSearch] = React.useState("");
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const [customers, setCustomers] = React.useState<CustomerOption[]>([]);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    apiClient
-      .GET("/customers", {
-        params: {
-          query: {
-            limit: 100,
-            search: debouncedSearch || undefined,
-            status: "ACTIVE",
-          },
-        },
-      })
-      .then(({ data }) => {
-        if (!cancelled) {
-          setCustomers(
-            (data?.data ?? []).map((c) => ({
-              id: c.id,
-              name: c.name,
-              email: c.email,
-            })),
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, debouncedSearch, apiClient]);
-
-  // Close on outside click
-  React.useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        role="combobox"
-        aria-expanded={open}
-        className="w-full justify-between font-normal"
-        onClick={() => setOpen(!open)}
-      >
-        {value ? valueName : "Select customer..."}
-        <ChevronsUpDown className="ml-auto size-4 shrink-0 opacity-50" />
-      </Button>
-      {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="Search customers..."
-              value={search}
-              onValueChange={setSearch}
-            />
-            <CommandList>
-              <CommandEmpty>No customers found.</CommandEmpty>
-              <CommandGroup>
-                {customers.map((c) => (
-                  <CommandItem
-                    key={c.id}
-                    value={c.id}
-                    onSelect={() => {
-                      onChange(c.id, c.name);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 size-4",
-                        value === c.id ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span>{c.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {c.email}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ── Main Component ─────────────────────────────────────────────────────
@@ -359,12 +234,12 @@ export function CreateOrderForm({
           {/* Customer */}
           <div className="space-y-2">
             <Label>Customer (optional)</Label>
-            <CustomerCombobox
+            <OrderCustomerCombobox
               value={customerId}
               valueName={customerName}
-              onChange={(id, name) => {
-                setCustomerId(id);
-                setCustomerName(name);
+              onChange={(customer) => {
+                setCustomerId(customer.id);
+                setCustomerName(customer.name);
               }}
               apiClient={apiClient}
             />

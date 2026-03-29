@@ -55,6 +55,7 @@ import {
 import { type components } from "@/lib/api-types";
 import { CancelOrderDialog } from "@/components/orders/cancel-order-dialog";
 import { CreateOrderForm } from "@/components/orders/create-order-form";
+import { EditOrderForm } from "@/components/orders/edit-order-form";
 
 type Order = components["schemas"]["OrderListItemDto"];
 type LocationDto = components["schemas"]["LocationDto"];
@@ -117,6 +118,7 @@ export function OrdersPage({
   const [cancelOrder, setCancelOrder] = React.useState<{ id: string } | null>(
     null,
   );
+  const [editingOrder, setEditingOrder] = React.useState<Order | null>(null);
 
   const search = searchParams.get("search") ?? "";
   const statusFilter = searchParams.get("status") ?? "all";
@@ -336,7 +338,11 @@ export function OrdersPage({
                               View details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Edit order</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setEditingOrder(order)}
+                          >
+                            Edit order
+                          </DropdownMenuItem>
                           <DropdownMenuItem>Print receipt</DropdownMenuItem>
                           {(order.status === "PENDING" ||
                             order.status === "CONFIRMED") && (
@@ -396,6 +402,19 @@ export function OrdersPage({
         open={createOpen}
         onOpenChange={setCreateOpen}
         onSuccess={(orderId) => router.push(`/orders/${orderId}`)}
+      />
+      <EditOrderForm
+        open={!!editingOrder}
+        onOpenChange={(open) => {
+          if (!open) setEditingOrder(null);
+        }}
+        order={editingOrder}
+        locations={locations}
+        onSuccess={() => {
+          setEditingOrder(null);
+          toast({ title: "Order updated" });
+          void refresh();
+        }}
       />
       <CancelOrderDialog
         open={!!cancelOrder}
