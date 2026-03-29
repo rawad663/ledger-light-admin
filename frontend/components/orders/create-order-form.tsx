@@ -32,10 +32,9 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Separator } from "@/components/ui/separator";
+import { OrderProductCombobox } from "@/components/orders/order-product-combobox";
 
 type LocationDto = components["schemas"]["LocationDto"];
-type ProductDto = components["schemas"]["ProductDto"];
-
 type CustomerOption = { id: string; name: string; email: string };
 
 type LineItem = {
@@ -184,117 +183,6 @@ function CustomerCombobox({
                       <span>{c.name}</span>
                       <span className="text-xs text-muted-foreground">
                         {c.email}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Searchable Product Combobox ────────────────────────────────────────
-function ProductCombobox({
-  value,
-  valueName,
-  onChange,
-  apiClient,
-}: {
-  value: string;
-  valueName: string;
-  onChange: (product: ProductDto) => void;
-  apiClient: ReturnType<typeof useApiClient>;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const [search, setSearch] = React.useState("");
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const [products, setProducts] = React.useState<ProductDto[]>([]);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    apiClient
-      .GET("/products", {
-        params: {
-          query: {
-            limit: 100,
-            search: debouncedSearch || undefined,
-            isActive: true,
-          },
-        },
-      })
-      .then(({ data }) => {
-        if (!cancelled) {
-          setProducts(data?.data ?? []);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, debouncedSearch, apiClient]);
-
-  // Close on outside click
-  React.useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        role="combobox"
-        aria-expanded={open}
-        className="w-full justify-between font-normal text-left"
-        onClick={() => setOpen(!open)}
-      >
-        <span className="truncate">
-          {value ? valueName : "Select product..."}
-        </span>
-        <ChevronsUpDown className="ml-auto size-4 shrink-0 opacity-50" />
-      </Button>
-      {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="Search products..."
-              value={search}
-              onValueChange={setSearch}
-            />
-            <CommandList>
-              <CommandEmpty>No products found.</CommandEmpty>
-              <CommandGroup>
-                {products.map((p) => (
-                  <CommandItem
-                    key={p.id}
-                    value={p.id}
-                    onSelect={() => {
-                      onChange(p);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 size-4",
-                        value === p.id ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span>{p.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {p.sku} &middot; {formatCents(p.priceCents)}
                       </span>
                     </div>
                   </CommandItem>
@@ -535,7 +423,7 @@ export function CreateOrderForm({
               <div key={item.key} className="rounded-md border p-3 space-y-3">
                 <div className="flex items-start gap-2">
                   <div className="flex-1">
-                    <ProductCombobox
+                    <OrderProductCombobox
                       value={item.productId}
                       valueName={item.productName}
                       onChange={(product) => {

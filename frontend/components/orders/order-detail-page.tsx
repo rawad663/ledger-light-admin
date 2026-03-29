@@ -17,14 +17,20 @@ import {
   Trash2,
   RefreshCw,
   ShieldCheck,
+  Loader2,
+  Plus,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { components } from "@/lib/api-types";
+import { useApiClient } from "@/hooks/use-api";
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -40,6 +46,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { OrderProductCombobox } from "@/components/orders/order-product-combobox";
 
 type OrderDetail = components["schemas"]["OrderDetailDto"];
 type AuditLog = components["schemas"]["AuditLogDto"];
@@ -107,7 +115,175 @@ function getActorName(actor: AuditLog["actor"]): string {
   return parts.length > 0 ? parts.join(" ") : actor.email;
 }
 
+function dollarsToCents(dollars: string): number {
+  const num = parseFloat(dollars);
+  if (Number.isNaN(num) || num < 0) return 0;
+  return Math.round(num * 100);
+}
+
 export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
+  const apiClient = useApiClient();
+  const [currentOrder, setCurrentOrder] = React.useState(order);
+  const [showAddItemForm, setShowAddItemForm] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [submittingItem, setSubmittingItem] = React.useState(false);
+  const [removingItemId, setRemovingItemId] = React.useState<string | null>(
+    null,
+  );
+  const [newItem, setNewItem] = React.useState({
+    productId: "",
+    productName: "",
+    sku: "",
+    unitPriceCents: 0,
+    qty: 1,
+    discountDollars: "",
+    taxDollars: "",
+  });
+
+  React.useEffect(() => {
+    setCurrentOrder(order);
+  }, [order]);
+
+  const isPending = currentOrder.status === "PENDING";
+  const canRemoveItems = isPending && (currentOrder.items?.length ?? 0) > 1;
+
+  function resetNewItemForm() {
+    setNewItem({
+      productId: "",
+      productName: "",
+      sku: "",
+      unitPriceCents: 0,
+      qty: 1,
+      discountDollars: "",
+      taxDollars: "",
+    });
+    setSubmitError(null);
+  }
+
+  function lineSubtotal() {
+    return newItem.qty * newItem.unitPriceCents;
+  }
+
+  function lineDiscount() {
+    return dollarsToCents(newItem.discountDollars);
+  }
+
+  function lineTax() {
+    return dollarsToCents(newItem.taxDollars);
+  }
+
+  function lineTotal() {
+    return lineSubtotal() - lineDiscount() + lineTax();
+  }
+
+  function validateNewItem(): string | null {
+    if (!newItem.productId) return "Select a product to add.";
+    if (newItem.qty < 1) return "Quantity must be at least 1.";
+    if (
+      currentOrder.items?.some((item) => item.productId === newItem.productId)
+    ) {
+      return "This product is already on the order.";
+    }
+    if (lineDiscount() > lineSubtotal()) {
+      return "Discount cannot exceed the line subtotal.";
+    }
+    return null;
+  }
+
+  async function handleAddItem() {
+    const validationError = validateNewItem();
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
+
+    setSubmittingItem(true);
+    setSubmitError(null);
+
+    const body: components["schemas"]["CreateOrderItemDto"] = {
+      productId: newItem.productId,
+      qty: newItem.qty,
+      discountCents: lineDiscount(),
+      taxCents: lineTax(),
+    };
+
+    const { data, error } = await apiClient.POST("/orders/{id}/items", {
+      params: { path: { id: currentOrder.id } },
+      body,
+    });
+
+    setSubmittingItem(false);
+
+    if (error) {
+      const message = (error as Error)?.message ?? "Failed to add item";
+      setSubmitError(message);
+      toast({
+        title: "Could not add item",
+        description: message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (data) {
+      setCurrentOrder((prev) => ({
+        ...prev,
+        ...data,
+        customer: prev.customer,
+        location: prev.location,
+      }));
+      setShowAddItemForm(false);
+      resetNewItemForm();
+      toast({ title: "Item added to order" });
+    }
+  }
+
+  async function handleRemoveItem(itemId: string) {
+    if ((currentOrder.items?.length ?? 0) <= 1) {
+      const message = "Orders must keep at least one item.";
+      setSubmitError(message);
+      toast({
+        title: "Could not remove item",
+        description: message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRemovingItemId(itemId);
+    setSubmitError(null);
+
+    const { data, error } = await apiClient.DELETE(
+      "/orders/{id}/items/{itemId}",
+      {
+        params: { path: { id: currentOrder.id, itemId } },
+      },
+    );
+
+    setRemovingItemId(null);
+
+    if (error) {
+      const message = (error as Error)?.message ?? "Failed to remove item";
+      setSubmitError(message);
+      toast({
+        title: "Could not remove item",
+        description: message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (data) {
+      setCurrentOrder((prev) => ({
+        ...prev,
+        ...data,
+        customer: prev.customer,
+        location: prev.location,
+      }));
+      toast({ title: "Item removed from order" });
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Page Header */}
@@ -126,13 +302,13 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
               </h1>
               <Badge
                 variant="outline"
-                className={cn("font-medium", statusColors[order.status])}
+                className={cn("font-medium", statusColors[currentOrder.status])}
               >
-                {formatStatus(order.status)}
+                {formatStatus(currentOrder.status)}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Created on {formatDate(order.createdAt)}
+              Created on {formatDate(currentOrder.createdAt)}
             </p>
           </div>
         </div>
@@ -176,10 +352,155 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
           {/* Order Items */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Order Items</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base">Order Items</CardTitle>
+                {isPending && !showAddItemForm && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowAddItemForm(true);
+                      setSubmitError(null);
+                    }}
+                  >
+                    <Plus className="mr-1.5 size-4" />
+                    Add Item
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
-              {order.items && order.items.length > 0 ? (
+              {submitError && !showAddItemForm && (
+                <div className="border-b px-6 py-4">
+                  <Alert variant="destructive">
+                    <AlertDescription>{submitError}</AlertDescription>
+                  </Alert>
+                </div>
+              )}
+              {showAddItemForm && isPending && (
+                <div className="border-b px-6 py-5">
+                  <div className="space-y-4 rounded-md border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium">Add item to order</p>
+                        <p className="text-sm text-muted-foreground">
+                          Select a product and adjust quantity, discount, or tax
+                          before saving.
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowAddItemForm(false);
+                          resetNewItemForm();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Product</Label>
+                      <OrderProductCombobox
+                        value={newItem.productId}
+                        valueName={newItem.productName}
+                        onChange={(product) =>
+                          setNewItem((prev) => ({
+                            ...prev,
+                            productId: product.id,
+                            productName: product.name,
+                            sku: product.sku,
+                            unitPriceCents: product.priceCents,
+                          }))
+                        }
+                        apiClient={apiClient}
+                      />
+                      {newItem.productId && (
+                        <p className="text-xs text-muted-foreground">
+                          {newItem.sku || "No SKU"} &middot;{" "}
+                          {formatCents(newItem.unitPriceCents)} each
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="qty">Qty</Label>
+                        <Input
+                          id="qty"
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={newItem.qty}
+                          onChange={(e) =>
+                            setNewItem((prev) => ({
+                              ...prev,
+                              qty: Math.max(
+                                1,
+                                Number.parseInt(e.target.value, 10) || 1,
+                              ),
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="discount">Discount ($)</Label>
+                        <Input
+                          id="discount"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={newItem.discountDollars}
+                          onChange={(e) =>
+                            setNewItem((prev) => ({
+                              ...prev,
+                              discountDollars: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tax">Tax ($)</Label>
+                        <Input
+                          id="tax"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={newItem.taxDollars}
+                          onChange={(e) =>
+                            setNewItem((prev) => ({
+                              ...prev,
+                              taxDollars: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {submitError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{submitError}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">
+                        Line total: {formatCents(lineTotal())}
+                      </p>
+                      <Button onClick={handleAddItem} disabled={submittingItem}>
+                        {submittingItem && (
+                          <Loader2 className="mr-1.5 size-4 animate-spin" />
+                        )}
+                        Save Item
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {currentOrder.items && currentOrder.items.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
@@ -192,10 +513,13 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                       <TableHead className="text-right pr-6">
                         Line Total
                       </TableHead>
+                      {isPending && (
+                        <TableHead className="w-[56px] pr-6 text-right" />
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {order.items.map((item) => (
+                    {currentOrder.items.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="pl-6 font-medium">
                           {item.productName}
@@ -224,6 +548,37 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                         <TableCell className="text-right pr-6 font-medium">
                           {formatCents(item.lineTotalCents)}
                         </TableCell>
+                        {isPending && (
+                          <TableCell className="pr-6 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  {removingItemId === item.id ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <MoreHorizontal className="size-4" />
+                                  )}
+                                  <span className="sr-only">
+                                    Item actions
+                                  </span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  disabled={
+                                    !canRemoveItems ||
+                                    removingItemId === item.id
+                                  }
+                                  onClick={() => void handleRemoveItem(item.id)}
+                                >
+                                  <Trash2 className="mr-2 size-4" />
+                                  Remove
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -245,23 +600,23 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCents(order.subtotalCents)}</span>
+                  <span>{formatCents(currentOrder.subtotalCents)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Discount</span>
                   <span className="text-destructive">
-                    -{formatCents(order.discountCents)}
+                    -{formatCents(currentOrder.discountCents)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Tax</span>
-                  <span>{formatCents(order.taxCents)}</span>
+                  <span>{formatCents(currentOrder.taxCents)}</span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between font-medium">
                   <span>Total</span>
                   <span className="text-lg">
-                    {formatCents(order.totalCents)}
+                    {formatCents(currentOrder.totalCents)}
                   </span>
                 </div>
               </div>
@@ -277,14 +632,14 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
               <CardTitle className="text-base">Customer Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {order.customer ? (
+              {currentOrder.customer ? (
                 <>
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
                       <User className="size-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{order.customer.name}</p>
+                      <p className="font-medium">{currentOrder.customer.name}</p>
                       <p className="text-xs text-muted-foreground">Customer</p>
                     </div>
                   </div>
@@ -292,10 +647,10 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="size-4 text-muted-foreground" />
                       <a
-                        href={`mailto:${order.customer.email}`}
+                        href={`mailto:${currentOrder.customer.email}`}
                         className="text-primary hover:underline"
                       >
-                        {order.customer.email}
+                        {currentOrder.customer.email}
                       </a>
                     </div>
                   </div>
@@ -319,25 +674,28 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
               <CardTitle className="text-base">Store Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {order.location ? (
+              {currentOrder.location ? (
                 <>
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-full bg-chart-2/15">
                       <MapPin className="size-5 text-chart-2" />
                     </div>
                     <div>
-                      <p className="font-medium">{order.location.name}</p>
+                      <p className="font-medium">{currentOrder.location.name}</p>
                       <p className="text-xs text-muted-foreground">
                         Point of Sale
                       </p>
                     </div>
                   </div>
-                  {(order.location.address || order.location.city) && (
+                  {(currentOrder.location.address ||
+                    currentOrder.location.city) && (
                     <div className="text-sm text-muted-foreground">
-                      {order.location.address && (
-                        <p>{order.location.address}</p>
+                      {currentOrder.location.address && (
+                        <p>{currentOrder.location.address}</p>
                       )}
-                      {order.location.city && <p>{order.location.city}</p>}
+                      {currentOrder.location.city && (
+                        <p>{currentOrder.location.city}</p>
+                      )}
                     </div>
                   )}
                 </>
