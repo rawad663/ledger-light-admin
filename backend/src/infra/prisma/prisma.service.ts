@@ -2,6 +2,9 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/generated/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
+type PaginationOrderBy = Record<string, 'asc' | 'desc' | Record<string, any>>;
+type PaginationOrderByInput = PaginationOrderBy | PaginationOrderBy[];
+
 @Injectable()
 export class PrismaService
   extends PrismaClient
@@ -37,7 +40,7 @@ export class PrismaService
   }
 
   private normalizeOrderBy(
-    orderBy?: Record<string, 'asc' | 'desc' | Record<string, any>>,
+    orderBy?: PaginationOrderByInput,
     sortBy?: string,
     sortOrder?: 'asc' | 'desc',
   ) {
@@ -68,9 +71,7 @@ export class PrismaService
     return normalized;
   }
 
-  private extractSortCursorConfig(
-    orderBy?: Array<Record<string, 'asc' | 'desc' | Record<string, any>>>,
-  ) {
+  private extractSortCursorConfig(orderBy?: PaginationOrderBy[]) {
     const [primaryOrderBy] = orderBy || [];
     if (!primaryOrderBy) {
       return undefined;
@@ -211,7 +212,7 @@ export class PrismaService
     paginationOptions: {
       limit: number;
       cursor?: string;
-      orderBy?: Record<string, 'asc' | 'desc' | Record<string, any>>;
+      orderBy?: PaginationOrderByInput;
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
     },
