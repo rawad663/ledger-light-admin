@@ -10,7 +10,6 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   ShoppingCart,
 } from "lucide-react";
 
