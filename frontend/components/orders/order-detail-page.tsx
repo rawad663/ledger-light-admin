@@ -44,7 +44,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -58,6 +57,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CancelOrderDialog } from "@/components/orders/cancel-order-dialog";
 import { OrderProductCombobox } from "@/components/orders/order-product-combobox";
 
 type OrderDetail = components["schemas"]["OrderDetailDto"];
@@ -205,6 +205,8 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
   const [submittingItem, setSubmittingItem] = React.useState(false);
   const [transitioningTo, setTransitioningTo] =
     React.useState<OrderStatus | null>(null);
+  const [showCancelOrderDialog, setShowCancelOrderDialog] =
+    React.useState(false);
   const [confirmTransition, setConfirmTransition] = React.useState<{
     toStatus: OrderStatus;
     label: string;
@@ -408,6 +410,11 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
     label: string;
     requiresConfirmation: boolean;
   }) {
+    if (action.toStatus === "CANCELLED") {
+      setShowCancelOrderDialog(true);
+      return;
+    }
+
     if (action.requiresConfirmation) {
       setConfirmTransition({
         toStatus: action.toStatus,
@@ -422,10 +429,6 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
   function getTransitionDescription() {
     if (!confirmTransition) return "";
 
-    if (confirmTransition.toStatus === "CANCELLED") {
-      return "This will cancel the order and record a cancellation timestamp.";
-    }
-
     if (confirmTransition.toStatus === "REFUNDED") {
       return "This will mark the order as refunded. Make sure any financial refund has been handled before continuing.";
     }
@@ -435,6 +438,16 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
 
   return (
     <>
+      <CancelOrderDialog
+        open={showCancelOrderDialog}
+        onOpenChange={setShowCancelOrderDialog}
+        order={{ id: currentOrder.id }}
+        onSuccess={() => {
+          toast({ title: "Order cancelled" });
+          router.refresh();
+        }}
+      />
+
       <AlertDialog
         open={!!confirmTransition}
         onOpenChange={(open) => {
@@ -538,12 +551,8 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>Edit order</DropdownMenuItem>
-                <DropdownMenuItem>Duplicate order</DropdownMenuItem>
+                {/* <DropdownMenuItem>Duplicate order</DropdownMenuItem> */}
                 <DropdownMenuItem>Send invoice</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">
-                  Delete order
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -555,244 +564,249 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
           <div className="lg:col-span-2 space-y-6">
             {/* Order Items */}
             <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-base">Order Items</CardTitle>
-                {isPending && !showAddItemForm && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowAddItemForm(true);
-                      setSubmitError(null);
-                    }}
-                  >
-                    <Plus className="mr-1.5 size-4" />
-                    Add Item
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {submitError && !showAddItemForm && (
-                <div className="border-b px-6 py-4">
-                  <Alert variant="destructive">
-                    <AlertDescription>{submitError}</AlertDescription>
-                  </Alert>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-base">Order Items</CardTitle>
+                  {isPending && !showAddItemForm && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowAddItemForm(true);
+                        setSubmitError(null);
+                      }}
+                    >
+                      <Plus className="mr-1.5 size-4" />
+                      Add Item
+                    </Button>
+                  )}
                 </div>
-              )}
-              {showAddItemForm && isPending && (
-                <div className="border-b px-6 py-5">
-                  <div className="space-y-4 rounded-md border bg-muted/20 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">Add item to order</p>
-                        <p className="text-sm text-muted-foreground">
-                          Select a product and adjust quantity, discount, or tax
-                          before saving.
-                        </p>
+              </CardHeader>
+              <CardContent className="p-0">
+                {submitError && !showAddItemForm && (
+                  <div className="border-b px-6 py-4">
+                    <Alert variant="destructive">
+                      <AlertDescription>{submitError}</AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+                {showAddItemForm && isPending && (
+                  <div className="border-b px-6 py-5">
+                    <div className="space-y-4 rounded-md border bg-muted/20 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium">Add item to order</p>
+                          <p className="text-sm text-muted-foreground">
+                            Select a product and adjust quantity, discount, or
+                            tax before saving.
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowAddItemForm(false);
+                            resetNewItemForm();
+                          }}
+                        >
+                          Cancel
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setShowAddItemForm(false);
-                          resetNewItemForm();
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label>Product</Label>
-                      <OrderProductCombobox
-                        value={newItem.productId}
-                        valueName={newItem.productName}
-                        onChange={(product) =>
-                          setNewItem((prev) => ({
-                            ...prev,
-                            productId: product.id,
-                            productName: product.name,
-                            sku: product.sku,
-                            unitPriceCents: product.priceCents,
-                          }))
-                        }
-                        apiClient={apiClient}
-                      />
-                      {newItem.productId && (
-                        <p className="text-xs text-muted-foreground">
-                          {newItem.sku || "No SKU"} &middot;{" "}
-                          {formatCents(newItem.unitPriceCents)} each
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-2">
-                        <Label htmlFor="qty">Qty</Label>
-                        <Input
-                          id="qty"
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={newItem.qty}
-                          onChange={(e) =>
+                        <Label>Product</Label>
+                        <OrderProductCombobox
+                          value={newItem.productId}
+                          valueName={newItem.productName}
+                          onChange={(product) =>
                             setNewItem((prev) => ({
                               ...prev,
-                              qty: Math.max(
-                                1,
-                                Number.parseInt(e.target.value, 10) || 1,
-                              ),
+                              productId: product.id,
+                              productName: product.name,
+                              sku: product.sku,
+                              unitPriceCents: product.priceCents,
                             }))
                           }
+                          apiClient={apiClient}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="discount">Discount ($)</Label>
-                        <Input
-                          id="discount"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={newItem.discountDollars}
-                          onChange={(e) =>
-                            setNewItem((prev) => ({
-                              ...prev,
-                              discountDollars: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tax">Tax ($)</Label>
-                        <Input
-                          id="tax"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={newItem.taxDollars}
-                          onChange={(e) =>
-                            setNewItem((prev) => ({
-                              ...prev,
-                              taxDollars: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    {submitError && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{submitError}</AlertDescription>
-                      </Alert>
-                    )}
-
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium">
-                        Line total: {formatCents(lineTotal())}
-                      </p>
-                      <Button onClick={handleAddItem} disabled={submittingItem}>
-                        {submittingItem && (
-                          <Loader2 className="mr-1.5 size-4 animate-spin" />
+                        {newItem.productId && (
+                          <p className="text-xs text-muted-foreground">
+                            {newItem.sku || "No SKU"} &middot;{" "}
+                            {formatCents(newItem.unitPriceCents)} each
+                          </p>
                         )}
-                        Save Item
-                      </Button>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="qty">Qty</Label>
+                          <Input
+                            id="qty"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={newItem.qty}
+                            onChange={(e) =>
+                              setNewItem((prev) => ({
+                                ...prev,
+                                qty: Math.max(
+                                  1,
+                                  Number.parseInt(e.target.value, 10) || 1,
+                                ),
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="discount">Discount ($)</Label>
+                          <Input
+                            id="discount"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={newItem.discountDollars}
+                            onChange={(e) =>
+                              setNewItem((prev) => ({
+                                ...prev,
+                                discountDollars: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tax">Tax ($)</Label>
+                          <Input
+                            id="tax"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={newItem.taxDollars}
+                            onChange={(e) =>
+                              setNewItem((prev) => ({
+                                ...prev,
+                                taxDollars: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {submitError && (
+                        <Alert variant="destructive">
+                          <AlertDescription>{submitError}</AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium">
+                          Line total: {formatCents(lineTotal())}
+                        </p>
+                        <Button
+                          onClick={handleAddItem}
+                          disabled={submittingItem}
+                        >
+                          {submittingItem && (
+                            <Loader2 className="mr-1.5 size-4 animate-spin" />
+                          )}
+                          Save Item
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-              {currentOrder.items && currentOrder.items.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="pl-6">Product</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-center">Qty</TableHead>
-                      <TableHead className="text-right">Unit Price</TableHead>
-                      <TableHead className="text-right">Discount</TableHead>
-                      <TableHead className="text-right">Tax</TableHead>
-                      <TableHead className="text-right pr-6">
-                        Line Total
-                      </TableHead>
-                      {isPending && (
-                        <TableHead className="w-[56px] pr-6 text-right" />
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentOrder.items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="pl-6 font-medium">
-                          {item.productName}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {item.sku ?? "-"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.qty}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCents(item.unitPriceCents)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {item.discountCents > 0 ? (
-                            <span className="text-destructive">
-                              -{formatCents(item.discountCents)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCents(item.taxCents)}
-                        </TableCell>
-                        <TableCell className="text-right pr-6 font-medium">
-                          {formatCents(item.lineTotalCents)}
-                        </TableCell>
+                )}
+                {currentOrder.items && currentOrder.items.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="pl-6">Product</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead className="text-center">Qty</TableHead>
+                        <TableHead className="text-right">Unit Price</TableHead>
+                        <TableHead className="text-right">Discount</TableHead>
+                        <TableHead className="text-right">Tax</TableHead>
+                        <TableHead className="text-right pr-6">
+                          Line Total
+                        </TableHead>
                         {isPending && (
-                          <TableCell className="pr-6 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  {removingItemId === item.id ? (
-                                    <Loader2 className="size-4 animate-spin" />
-                                  ) : (
-                                    <MoreHorizontal className="size-4" />
-                                  )}
-                                  <span className="sr-only">
-                                    Item actions
-                                  </span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  disabled={
-                                    !canRemoveItems ||
-                                    removingItemId === item.id
-                                  }
-                                  onClick={() => void handleRemoveItem(item.id)}
-                                >
-                                  <Trash2 className="mr-2 size-4" />
-                                  Remove
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
+                          <TableHead className="w-[56px] pr-6 text-right" />
                         )}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="p-6 text-center text-sm text-muted-foreground">
-                  No items in this order.
-                </div>
-              )}
-            </CardContent>
+                    </TableHeader>
+                    <TableBody>
+                      {currentOrder.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="pl-6 font-medium">
+                            {item.productName}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {item.sku ?? "-"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.qty}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCents(item.unitPriceCents)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.discountCents > 0 ? (
+                              <span className="text-destructive">
+                                -{formatCents(item.discountCents)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCents(item.taxCents)}
+                          </TableCell>
+                          <TableCell className="text-right pr-6 font-medium">
+                            {formatCents(item.lineTotalCents)}
+                          </TableCell>
+                          {isPending && (
+                            <TableCell className="pr-6 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    {removingItemId === item.id ? (
+                                      <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                      <MoreHorizontal className="size-4" />
+                                    )}
+                                    <span className="sr-only">
+                                      Item actions
+                                    </span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    disabled={
+                                      !canRemoveItems ||
+                                      removingItemId === item.id
+                                    }
+                                    onClick={() =>
+                                      void handleRemoveItem(item.id)
+                                    }
+                                  >
+                                    <Trash2 className="mr-2 size-4" />
+                                    Remove
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    No items in this order.
+                  </div>
+                )}
+              </CardContent>
             </Card>
 
             {/* Pricing Summary */}
@@ -868,129 +882,137 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
 
             {/* Customer Info */}
             <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Customer Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {currentOrder.customer ? (
-                <>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {currentOrder.customer ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+                        <User className="size-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {currentOrder.customer.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Customer
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="size-4 text-muted-foreground" />
+                        <a
+                          href={`mailto:${currentOrder.customer.email}`}
+                          className="text-primary hover:underline"
+                        >
+                          {currentOrder.customer.email}
+                        </a>
+                      </div>
+                    </div>
+                  </>
+                ) : (
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-                      <User className="size-5 text-primary" />
+                    <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                      <User className="size-5 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="font-medium">{currentOrder.customer.name}</p>
-                      <p className="text-xs text-muted-foreground">Customer</p>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      No customer assigned
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="size-4 text-muted-foreground" />
-                      <a
-                        href={`mailto:${currentOrder.customer.email}`}
-                        className="text-primary hover:underline"
-                      >
-                        {currentOrder.customer.email}
-                      </a>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-                    <User className="size-5 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    No customer assigned
-                  </p>
-                </div>
-              )}
-            </CardContent>
+                )}
+              </CardContent>
             </Card>
 
             {/* Location Info */}
             <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Store Location</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {currentOrder.location ? (
-                <>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Store Location</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {currentOrder.location ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-full bg-chart-2/15">
+                        <MapPin className="size-5 text-chart-2" />
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {currentOrder.location.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Point of Sale
+                        </p>
+                      </div>
+                    </div>
+                    {(currentOrder.location.address ||
+                      currentOrder.location.city) && (
+                      <div className="text-sm text-muted-foreground">
+                        {currentOrder.location.address && (
+                          <p>{currentOrder.location.address}</p>
+                        )}
+                        {currentOrder.location.city && (
+                          <p>{currentOrder.location.city}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-chart-2/15">
-                      <MapPin className="size-5 text-chart-2" />
+                    <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                      <MapPin className="size-5 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="font-medium">{currentOrder.location.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Point of Sale
-                      </p>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      No location assigned
+                    </p>
                   </div>
-                  {(currentOrder.location.address ||
-                    currentOrder.location.city) && (
-                    <div className="text-sm text-muted-foreground">
-                      {currentOrder.location.address && (
-                        <p>{currentOrder.location.address}</p>
-                      )}
-                      {currentOrder.location.city && (
-                        <p>{currentOrder.location.city}</p>
-                      )}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-                    <MapPin className="size-5 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    No location assigned
-                  </p>
-                </div>
-              )}
-            </CardContent>
+                )}
+              </CardContent>
             </Card>
 
             {/* Activity Timeline */}
             <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Activity Timeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {auditLogs.length > 0 ? (
-                <div className="relative space-y-4">
-                  {auditLogs.map((log, index) => {
-                    const Icon = actionIcons[log.action] ?? Clock;
-                    return (
-                      <div key={log.id} className="relative flex gap-3">
-                        {index !== auditLogs.length - 1 && (
-                          <div className="absolute left-[15px] top-8 h-[calc(100%-8px)] w-px bg-border" />
-                        )}
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                          <Icon className="size-4 text-muted-foreground" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Activity Timeline</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {auditLogs.length > 0 ? (
+                  <div className="relative space-y-4">
+                    {auditLogs.map((log, index) => {
+                      const Icon = actionIcons[log.action] ?? Clock;
+                      return (
+                        <div key={log.id} className="relative flex gap-3">
+                          {index !== auditLogs.length - 1 && (
+                            <div className="absolute left-[15px] top-8 h-[calc(100%-8px)] w-px bg-border" />
+                          )}
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                            <Icon className="size-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 pt-0.5">
+                            <p className="text-sm font-medium">
+                              {actionLabels[log.action] ?? log.action}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              by {getActorName(log.actor)}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {formatDate(log.createdAt)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 pt-0.5">
-                          <p className="text-sm font-medium">
-                            {actionLabels[log.action] ?? log.action}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            by {getActorName(log.actor)}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatDate(log.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No activity recorded yet.
-                </p>
-              )}
-            </CardContent>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No activity recorded yet.
+                  </p>
+                )}
+              </CardContent>
             </Card>
           </div>
         </div>
