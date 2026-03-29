@@ -102,6 +102,7 @@ export function OrdersPage({
     hasPrevious,
     goNext,
     goPrevious,
+    refresh,
     showingFrom,
     showingTo,
     loading,
@@ -350,7 +351,7 @@ export function OrdersPage({
         order={orderBeingCancelled}
         onSuccess={() => {
           toast({ title: "Order cancelled" });
-          router.refresh();
+          void refresh();
         }}
       />
 
@@ -365,7 +366,7 @@ export function OrdersPage({
         locations={locations}
         onSuccess={() => {
           toast({ title: "Order updated" });
-          router.refresh();
+          void refresh();
         }}
       />
     </div>

@@ -77,6 +77,10 @@ export function LoginPage() {
 
       const returnTo = searchParams.get("returnTo") || "/";
       router.replace(returnTo);
+    } catch (error) {
+      setSubmissionError(
+        error instanceof Error ? error.message : "Unable to reach the server",
+      );
     } finally {
       setIsSubmitting(false);
     }
