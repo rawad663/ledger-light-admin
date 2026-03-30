@@ -68,6 +68,19 @@ enum InventoryAjustmentReason {
   INITIAL_STOCK
 }
 
+enum LocationType {
+  STORE
+  WAREHOUSE
+  POP_UP
+  OTHER
+}
+
+enum LocationStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
 //
 // Multi-tenant boundary
 //
@@ -200,8 +213,16 @@ model Location {
   organizationId String
 
   name           String        @db.VarChar(200)
-  address        String        @default("") @db.VarChar(500)
-  city           String        @default("") @db.VarChar(200)
+  code           String?       @db.VarChar(50)
+  type           LocationType  @default(STORE)
+  status         LocationStatus @default(ACTIVE)
+  addressLine1   String        @default("") @db.VarChar(255)
+  addressLine2   String?       @db.VarChar(255)
+  city           String        @default("") @db.VarChar(120)
+  stateProvince  String?       @db.VarChar(120)
+  postalCode     String?       @db.VarChar(40)
+  countryCode    String        @default("CA") @db.VarChar(2)
+  notes          String?       @db.Text
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -212,7 +233,10 @@ model Location {
   orders         Order[]
 
   @@unique([organizationId, name])
-  @@index([organizationId])
+  @@unique([organizationId, code])
+  @@index([organizationId, name])
+  @@index([organizationId, status])
+  @@index([organizationId, type])
 }
 
 model InventoryLevel {
