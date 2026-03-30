@@ -129,7 +129,7 @@ export function ProductsPage({
     initialTotal,
     initialNextCursor,
     limit: PRODUCTS_PAGE_LIMIT,
-    filterKey: `${search}|${categoryFilter}`,
+    filterKey: [search, categoryFilter],
     fetchPage: React.useCallback(
       async (cursor?: string) => {
         const { data } = await apiClient.GET("/products", {

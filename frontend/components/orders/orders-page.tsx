@@ -111,7 +111,7 @@ export function OrdersPage({
     initialTotal,
     initialNextCursor,
     limit: ORDERS_PAGE_LIMIT,
-    filterKey: `${search}|${statusFilter}|${locationFilter}`,
+    filterKey: [search, statusFilter, locationFilter],
     fetchPage: React.useCallback(
       async (cursor?: string) => {
         const { data } = await apiClient.GET("/orders", {
@@ -253,7 +253,9 @@ export function OrdersPage({
                         {formatOrderId(order.id)}
                       </Link>
                     </TableCell>
-                    <TableCell>{order.customer?.name ?? "Walk-in customer"}</TableCell>
+                    <TableCell>
+                      {order.customer?.name ?? "Walk-in customer"}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {order.location?.name ?? "—"}
                     </TableCell>
@@ -288,7 +290,9 @@ export function OrdersPage({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/orders/${order.id}`}>View details</Link>
+                            <Link href={`/orders/${order.id}`}>
+                              View details
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => setOrderBeingEdited(order)}

@@ -112,7 +112,7 @@ export function InventoryPage({
     initialTotal,
     initialNextCursor,
     limit: INVENTORY_PAGE_LIMIT,
-    filterKey: `${search}|${locationFilter}|${lowStockOnly}`,
+    filterKey: [search, locationFilter, lowStockOnly],
     fetchPage: React.useCallback(
       async (cursor?: string) => {
         const { data } = await apiClient.GET("/inventory/levels", {

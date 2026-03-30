@@ -62,7 +62,12 @@ import { cn } from "@/lib/utils";
 type LocationListItem = components["schemas"]["LocationListItemDto"];
 type LocationDto = components["schemas"]["LocationDto"];
 
-const LOCATION_TYPE_OPTIONS = ["STORE", "WAREHOUSE", "POP_UP", "OTHER"] as const;
+const LOCATION_TYPE_OPTIONS = [
+  "STORE",
+  "WAREHOUSE",
+  "POP_UP",
+  "OTHER",
+] as const;
 const LOCATION_STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "ARCHIVED"] as const;
 
 const LOCATION_STATUS_STYLES: Record<string, string> = {
@@ -124,7 +129,7 @@ export function LocationsPage({
     initialTotal,
     initialNextCursor,
     limit: LOCATIONS_PAGE_LIMIT,
-    filterKey: `${search}|${typeFilter}|${statusFilter}`,
+    filterKey: [search, typeFilter, statusFilter],
     fetchPage: React.useCallback(
       async (cursor?: string) => {
         const { data } = await apiClient.GET("/locations", {
@@ -133,8 +138,14 @@ export function LocationsPage({
               limit: LOCATIONS_PAGE_LIMIT,
               cursor,
               search: search || undefined,
-              type: typeFilter === "all" ? undefined : typeFilter,
-              status: statusFilter === "all" ? undefined : statusFilter,
+              type:
+                typeFilter === "all"
+                  ? undefined
+                  : (typeFilter as LocationDto["type"]),
+              status:
+                statusFilter === "all"
+                  ? undefined
+                  : (statusFilter as LocationDto["status"]),
               sortBy: "updatedAt",
               sortOrder: "desc",
             },
@@ -191,8 +202,9 @@ export function LocationsPage({
     if (error || !data) {
       toast({
         title: "Could not load location",
-        description:
-          (error as Error)?.message ?? "Failed to load this location.",
+        description: error
+          ? (error as Error).message
+          : "Failed to load this location.",
         variant: "destructive",
       });
       return;

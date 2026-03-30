@@ -1,21 +1,26 @@
 import { AppShell } from "@/components/app-shell";
 import { CustomersPage } from "@/components/customers/customers-page";
 import { createApi } from "@/lib/api";
+import { components } from "@/lib/api-types";
+
+type CustomerStatus = components["schemas"]["CustomerDto"]["status"];
 
 export default async function Customers({
   searchParams,
 }: {
   searchParams: Promise<{
     search?: string;
+    status?: CustomerStatus;
   }>;
 }) {
-  const { search } = await searchParams;
+  const { search, status } = await searchParams;
   const api = await createApi();
   const { data, error } = await api.GET("/customers", {
     params: {
       query: {
         limit: 50,
         search,
+        status,
         sortBy: "updatedAt",
         sortOrder: "desc",
       },
