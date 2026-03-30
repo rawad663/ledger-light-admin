@@ -70,7 +70,8 @@ export function DeleteLocationDialog({
               {location?.name}
             </span>
             . Deletion is blocked if this is the only location in the
-            organization or if inventory is still on hand.
+            organization, if inventory is still on hand, or if the location has
+            order history.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

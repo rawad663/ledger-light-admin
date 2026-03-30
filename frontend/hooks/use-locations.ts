@@ -23,22 +23,31 @@ export function useLocations(options: UseLocationsOptions = {}) {
 
     let cancelled = false;
 
-    apiClient
-      .GET("/locations", {
-        params: {
-          query: {
-            limit: 100,
-            status: "ACTIVE",
-            sortBy: "name",
-            sortOrder: "asc",
+    void (async () => {
+      const nextLocations: LocationDto[] = [];
+      let cursor: string | undefined;
+
+      do {
+        const { data } = await apiClient.GET("/locations", {
+          params: {
+            query: {
+              limit: 100,
+              cursor,
+              status: "ACTIVE",
+              sortBy: "name",
+              sortOrder: "asc",
+            },
           },
-        },
-      })
-      .then(({ data }) => {
-        if (!cancelled) {
-          setLocations(data?.data ?? []);
-        }
-      });
+        });
+
+        nextLocations.push(...(data?.data ?? []));
+        cursor = data?.nextCursor ?? undefined;
+      } while (cursor);
+
+      if (!cancelled) {
+        setLocations(nextLocations);
+      }
+    })();
 
     return () => {
       cancelled = true;

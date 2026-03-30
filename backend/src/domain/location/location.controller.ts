@@ -126,7 +126,7 @@ export class LocationController {
     summary: 'Delete location',
     ok: LocationDto,
     conflictDesc:
-      'Cannot delete the only location in an organization or a location with inventory on hand',
+      'Cannot delete the only location in an organization, a location with inventory on hand, or a location with history',
     notFoundDesc: 'Location not found',
     params: [{ name: 'id', description: 'Location ID', type: String }],
   })

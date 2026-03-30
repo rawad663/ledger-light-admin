@@ -157,9 +157,29 @@ export class LocationService {
       errorType: 'conflict',
     });
 
+    await this.assertNoLocationHistory(organizationId, locationId);
+
     return this.prismaService.location.delete({
       where: { id: locationId, organizationId },
     });
+  }
+
+  private async assertNoLocationHistory(
+    organizationId: string,
+    locationId: string,
+  ) {
+    const orderCount = await this.prismaService.order.count({
+      where: {
+        organizationId,
+        locationId,
+      },
+    });
+
+    if (orderCount > 0) {
+      throw new ConflictException(
+        'Cannot delete a location with order history',
+      );
+    }
   }
 
   private async assertNoInventoryOnHand(

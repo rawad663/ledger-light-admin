@@ -178,6 +178,8 @@ describe('LocationService', () => {
     it('deletes a location when allowed', async () => {
       (prisma.location.count as jest.Mock).mockResolvedValue(2);
       (prisma.inventoryLevel.count as jest.Mock).mockResolvedValue(0);
+      (prisma.inventoryAdjustment.count as jest.Mock).mockResolvedValue(0);
+      (prisma.order.count as jest.Mock).mockResolvedValue(0);
       (prisma.location.delete as jest.Mock).mockResolvedValue({ id: 'loc-1' });
 
       await service.deleteLocation('org-1', 'loc-1');
@@ -198,6 +200,17 @@ describe('LocationService', () => {
     it('blocks deletion when stock exists', async () => {
       (prisma.location.count as jest.Mock).mockResolvedValue(2);
       (prisma.inventoryLevel.count as jest.Mock).mockResolvedValue(1);
+
+      await expect(
+        service.deleteLocation('org-1', 'loc-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('blocks deletion when order history exists', async () => {
+      (prisma.location.count as jest.Mock).mockResolvedValue(2);
+      (prisma.inventoryLevel.count as jest.Mock).mockResolvedValue(0);
+      (prisma.inventoryAdjustment.count as jest.Mock).mockResolvedValue(0);
+      (prisma.order.count as jest.Mock).mockResolvedValue(1);
 
       await expect(
         service.deleteLocation('org-1', 'loc-1'),

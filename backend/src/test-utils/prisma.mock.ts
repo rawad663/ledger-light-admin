@@ -33,12 +33,14 @@ export const createPrismaMock = (tx?: Record<string, any>) => {
     inventoryAdjustment: {
       create: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
     },
     order: {
       create: jest.fn(),
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
       groupBy: jest.fn(),
