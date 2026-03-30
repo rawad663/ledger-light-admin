@@ -9,7 +9,6 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { CreateProductForm } from "@/components/products/create-product-form";
@@ -100,7 +99,6 @@ export function ProductsPage({
   initialSearch,
 }: ProductsPageProps) {
   const apiClient = useApiClient();
-  const router = useRouter();
   const { searchParams, searchInput, setSearchInput, updateParams } =
     useUrlSearch(initialSearch);
   const [isCreateFormOpen, setIsCreateFormOpen] = React.useState(false);

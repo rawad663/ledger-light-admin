@@ -83,9 +83,9 @@ function isOrderLocationDto(
 ): location is OrderLocationDto {
   return (
     location !== null &&
-    "address" in location &&
+    "addressLine1" in location &&
     "city" in location &&
-    typeof location.address === "string" &&
+    typeof location.addressLine1 === "string" &&
     typeof location.city === "string"
   );
 }
@@ -184,8 +184,11 @@ export function EditOrderForm({
         ? {
             id: selectedLocation.id,
             name: selectedLocation.name,
-            address: selectedLocation.address,
+            addressLine1: selectedLocation.addressLine1,
             city: selectedLocation.city,
+            stateProvince: selectedLocation.stateProvince,
+            postalCode: selectedLocation.postalCode,
+            countryCode: selectedLocation.countryCode,
           }
         : null,
     });

@@ -64,6 +64,7 @@ import {
   formatCurrencyCents,
   formatDateTime,
   formatEnumLabel,
+  formatLocationAddress,
   formatOrderId,
 } from "@/lib/formatters";
 import { ORDER_STATUS_STYLES } from "@/lib/status";
@@ -939,15 +940,10 @@ export function OrderDetailPage({ order, auditLogs }: OrderDetailPageProps) {
                         </p>
                       </div>
                     </div>
-                    {(currentOrder.location.address ||
+                    {(currentOrder.location.addressLine1 ||
                       currentOrder.location.city) && (
                       <div className="text-sm text-muted-foreground">
-                        {currentOrder.location.address && (
-                          <p>{currentOrder.location.address}</p>
-                        )}
-                        {currentOrder.location.city && (
-                          <p>{currentOrder.location.city}</p>
-                        )}
+                        <p>{formatLocationAddress(currentOrder.location)}</p>
                       </div>
                     )}
                   </>
