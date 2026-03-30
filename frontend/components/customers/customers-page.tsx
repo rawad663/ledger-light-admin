@@ -30,6 +30,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -63,6 +70,7 @@ import { cn } from "@/lib/utils";
 
 type CustomerListItem = components["schemas"]["CustomerListItemDto"];
 type CustomerDetail = components["schemas"]["CustomerDetailDto"];
+type CustomerStatus = components["schemas"]["CustomerDto"]["status"];
 
 export const CUSTOMERS_PAGE_LIMIT = 50;
 
@@ -81,7 +89,7 @@ export function CustomersPage({
 }: CustomersPageProps) {
   const apiClient = useApiClient();
   const router = useRouter();
-  const { searchParams, searchInput, setSearchInput } =
+  const { searchParams, searchInput, setSearchInput, updateParams } =
     useUrlSearch(initialSearch);
 
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -101,6 +109,8 @@ export function CustomersPage({
   } | null>(null);
 
   const search = searchParams.get("search") ?? "";
+  const statusFilter =
+    (searchParams.get("status") as CustomerStatus) ?? undefined;
 
   const {
     data: customers,
@@ -118,7 +128,7 @@ export function CustomersPage({
     initialTotal,
     initialNextCursor,
     limit: CUSTOMERS_PAGE_LIMIT,
-    filterKey: search,
+    filterKey: [search, statusFilter],
     fetchPage: useCallback(
       async (cursor?: string) => {
         const { data } = await apiClient.GET("/customers", {
@@ -127,6 +137,7 @@ export function CustomersPage({
               limit: CUSTOMERS_PAGE_LIMIT,
               cursor,
               search: search || undefined,
+              status: statusFilter,
               sortBy: "updatedAt",
               sortOrder: "desc",
             },
@@ -139,7 +150,7 @@ export function CustomersPage({
           nextCursor: data?.nextCursor ?? undefined,
         };
       },
-      [apiClient, search],
+      [apiClient, search, statusFilter],
     ),
   });
 
@@ -181,6 +192,22 @@ export function CustomersPage({
           onChange={setSearchInput}
           placeholder="Search by name, email, or phone..."
         />
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => updateParams({ status: value })}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            {["Active", "Inactive", "Blocked"].map((s) => (
+              <SelectItem key={s} value={s.toUpperCase()}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className={cn("rounded-lg border bg-card", loading && "opacity-60")}>

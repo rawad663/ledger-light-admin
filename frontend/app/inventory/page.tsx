@@ -8,17 +8,18 @@ export default async function Inventory({
   searchParams: Promise<{
     search?: string;
     location?: string;
+    locationId?: string;
     lowStockOnly?: string;
   }>;
 }) {
-  const { search, location, lowStockOnly } = await searchParams;
+  const { search, location, locationId, lowStockOnly } = await searchParams;
   const api = await createApi();
   const { data, error } = await api.GET("/inventory/levels", {
     params: {
       query: {
         limit: 50,
         search,
-        locationId: location,
+        locationId: locationId ?? location,
         lowStockOnly: lowStockOnly === "true" ? true : undefined,
       },
     },

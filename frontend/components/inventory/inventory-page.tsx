@@ -8,7 +8,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { AdjustStockForm } from "@/components/inventory/adjust-stock-form";
@@ -81,7 +80,6 @@ export function InventoryPage({
   initialSearch,
 }: InventoryPageProps) {
   const apiClient = useApiClient();
-  const router = useRouter();
   const { searchParams, searchInput, setSearchInput, updateParams } =
     useUrlSearch(initialSearch);
   const [isAdjustFormOpen, setIsAdjustFormOpen] = React.useState(false);
@@ -92,7 +90,8 @@ export function InventoryPage({
   }>({});
 
   const search = searchParams.get("search") ?? "";
-  const locationFilter = searchParams.get("location") ?? "all";
+  const locationFilter =
+    searchParams.get("locationId") ?? searchParams.get("location") ?? "all";
   const lowStockOnly = searchParams.get("lowStockOnly") === "true";
   const [lowStockCount, setLowStockCount] =
     React.useState(initialLowStockCount);
@@ -113,7 +112,7 @@ export function InventoryPage({
     initialTotal,
     initialNextCursor,
     limit: INVENTORY_PAGE_LIMIT,
-    filterKey: `${search}|${locationFilter}|${lowStockOnly}`,
+    filterKey: [search, locationFilter, lowStockOnly],
     fetchPage: React.useCallback(
       async (cursor?: string) => {
         const { data } = await apiClient.GET("/inventory/levels", {
@@ -211,7 +210,9 @@ export function InventoryPage({
         />
         <Select
           value={locationFilter}
-          onValueChange={(value) => updateParams({ location: value })}
+          onValueChange={(value) =>
+            updateParams({ location: "", locationId: value })
+          }
         >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Location" />

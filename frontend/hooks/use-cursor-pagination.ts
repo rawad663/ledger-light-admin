@@ -11,7 +11,7 @@ type UseCursorPaginationOptions<T> = {
   initialTotal: number;
   initialNextCursor?: string;
   limit: number;
-  filterKey?: string;
+  filterKey?: string | (string | number | boolean)[];
   fetchPage: (cursor?: string) => Promise<PaginatedResult<T>>;
 };
 
@@ -32,10 +32,12 @@ export function useCursorPagination<T>({
   const [loading, setLoading] = useState(false);
 
   // Reset pagination and refetch when filters change
-  const prevFilterKey = useRef(filterKey);
+  const fk = Array.isArray(filterKey) ? filterKey.join("|") : filterKey;
+
+  const prevFilterKey = useRef(fk);
   useEffect(() => {
-    if (prevFilterKey.current === filterKey) return;
-    prevFilterKey.current = filterKey;
+    if (prevFilterKey.current === fk) return;
+    prevFilterKey.current = fk;
 
     let cancelled = false;
     setLoading(true);
@@ -53,7 +55,7 @@ export function useCursorPagination<T>({
     return () => {
       cancelled = true;
     };
-  }, [filterKey, fetchPage]);
+  }, [fk, fetchPage]);
 
   const page = cursorStack.length;
   const hasPrevious = page > 1;

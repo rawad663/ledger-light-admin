@@ -160,6 +160,46 @@ export interface paths {
         patch: operations["CustomerController_updateCustomer"];
         trace?: never;
     };
+    "/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get locations
+         * @description List locations for the active organization with pagination.
+         */
+        get: operations["LocationController_getLocations"];
+        put?: never;
+        /** Create location */
+        post: operations["LocationController_createLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/locations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get location by ID */
+        get: operations["LocationController_getLocationById"];
+        put?: never;
+        post?: never;
+        /** Delete location */
+        delete: operations["LocationController_deleteLocation"];
+        options?: never;
+        head?: never;
+        /** Update location */
+        patch: operations["LocationController_updateLocation"];
+        trace?: never;
+    };
     "/products": {
         parameters: {
             query?: never;
@@ -606,12 +646,79 @@ export interface components {
             /** Format: uuid */
             organizationId: string;
             name: string;
-            address: string;
+            code?: string | null;
+            /** @enum {string} */
+            type: "STORE" | "WAREHOUSE" | "POP_UP" | "OTHER";
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+            addressLine1: string;
+            addressLine2?: string | null;
             city: string;
+            stateProvince?: string | null;
+            postalCode?: string | null;
+            countryCode: string;
+            notes?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        CreateLocationDto: {
+            name: string;
+            code?: string | null;
+            /** @enum {string} */
+            type: "STORE" | "WAREHOUSE" | "POP_UP" | "OTHER";
+            addressLine1: string;
+            addressLine2?: string | null;
+            city: string;
+            stateProvince?: string | null;
+            postalCode?: string | null;
+            countryCode: string;
+            notes?: string | null;
+        };
+        UpdateLocationDto: {
+            name?: string;
+            code?: string | null;
+            /** @enum {string} */
+            type?: "STORE" | "WAREHOUSE" | "POP_UP" | "OTHER";
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+            addressLine1?: string;
+            addressLine2?: string | null;
+            city?: string;
+            stateProvince?: string | null;
+            postalCode?: string | null;
+            countryCode?: string;
+            notes?: string | null;
+        };
+        LocationListItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            organizationId: string;
+            name: string;
+            code?: string | null;
+            /** @enum {string} */
+            type: "STORE" | "WAREHOUSE" | "POP_UP" | "OTHER";
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+            addressLine1: string;
+            addressLine2?: string | null;
+            city: string;
+            stateProvince?: string | null;
+            postalCode?: string | null;
+            countryCode: string;
+            notes?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            onHandQuantity: number;
+        };
+        GetLocationsResponseDto: {
+            data: components["schemas"]["LocationListItemDto"][];
+            nextCursor?: string;
+            totalCount: number;
         };
         InventoryLevelsDataDto: {
             product: components["schemas"]["ProductDto"];
@@ -776,8 +883,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            address: string;
+            addressLine1: string;
             city: string;
+            stateProvince?: string | null;
+            postalCode?: string | null;
+            countryCode: string;
         };
         OrderListItemDto: {
             /** @enum {string} */
@@ -1329,6 +1439,293 @@ export interface operations {
             };
             /** @description Customer not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LocationController_getLocations: {
+        parameters: {
+            query?: {
+                /** @description Search by name, code, address, or city */
+                search?: string;
+                /** @description Filter by location status */
+                status?: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+                /** @description Filter by location type */
+                type?: "STORE" | "WAREHOUSE" | "POP_UP" | "OTHER";
+                /** @description Max items per page (1-100) */
+                limit?: number;
+                /** @description Pagination cursor */
+                cursor?: string;
+                /** @description Sort field */
+                sortBy?: string;
+                /** @description Sort direction */
+                sortOrder?: "asc" | "desc";
+            };
+            header: {
+                /** @description Active organization context for the request. Must be an organization the user is a member of. */
+                "X-Organization-Id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetLocationsResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (invalid/missing organization context) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LocationController_getLocationById: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Active organization context for the request. Must be an organization the user is a member of. */
+                "X-Organization-Id": string;
+            };
+            path: {
+                /** @description Location ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (invalid/missing organization context) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Location not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LocationController_createLocation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Active organization context for the request. Must be an organization the user is a member of. */
+                "X-Organization-Id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLocationDto"];
+            };
+        };
+        responses: {
+            /** @description Resource created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (invalid/missing organization context) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate location name or code */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LocationController_updateLocation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Active organization context for the request. Must be an organization the user is a member of. */
+                "X-Organization-Id": string;
+            };
+            path: {
+                /** @description Location ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLocationDto"];
+            };
+        };
+        responses: {
+            /** @description Successful response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (invalid/missing organization context) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Location not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LocationController_deleteLocation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Active organization context for the request. Must be an organization the user is a member of. */
+                "X-Organization-Id": string;
+            };
+            path: {
+                /** @description Location ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (invalid/missing organization context) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Location not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cannot delete the only location in an organization or a location with inventory on hand */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

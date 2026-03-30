@@ -23,15 +23,31 @@ export function useLocations(options: UseLocationsOptions = {}) {
 
     let cancelled = false;
 
-    // TODO: this should be replaced with a call to a /locations endpoint
-    // once implemented in the backend
-    apiClient
-      .GET("/inventory/levels", { params: { query: { limit: 1 } } })
-      .then(({ data }) => {
-        if (!cancelled) {
-          setLocations(data?.locations ?? []);
-        }
-      });
+    void (async () => {
+      const nextLocations: LocationDto[] = [];
+      let cursor: string | undefined;
+
+      do {
+        const { data } = await apiClient.GET("/locations", {
+          params: {
+            query: {
+              limit: 100,
+              cursor,
+              status: "ACTIVE",
+              sortBy: "name",
+              sortOrder: "asc",
+            },
+          },
+        });
+
+        nextLocations.push(...(data?.data ?? []));
+        cursor = data?.nextCursor ?? undefined;
+      } while (cursor);
+
+      if (!cancelled) {
+        setLocations(nextLocations);
+      }
+    })();
 
     return () => {
       cancelled = true;

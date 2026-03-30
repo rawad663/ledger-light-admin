@@ -59,3 +59,22 @@ export function dollarsToCents(dollars: string): number {
 
   return Math.round(amount * 100);
 }
+
+export function formatLocationAddress(location: {
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  stateProvince?: string | null;
+  postalCode?: string | null;
+  countryCode?: string | null;
+}): string {
+  const street = [location.addressLine1, location.addressLine2]
+    .filter(Boolean)
+    .join(", ");
+  const locality = [location.city, location.stateProvince, location.postalCode]
+    .filter(Boolean)
+    .join(", ");
+  const parts = [street, locality, location.countryCode].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" • ") : "No address provided";
+}
