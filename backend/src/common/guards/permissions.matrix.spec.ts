@@ -11,12 +11,22 @@
  *   matches the role matrix correctly.
  */
 
-import { Permission, ROLE_PERMISSIONS, WILDCARD_PERMISSION } from '@src/common/permissions';
+import {
+  Permission,
+  ROLE_PERMISSIONS,
+  WILDCARD_PERMISSION,
+} from '@src/common/permissions';
 import { hasPermission } from './permissions.guard';
 
 // ── Section A: Role × Permission matrix ──────────────────────────────────────
 
-const ALL_ROLES = ['OWNER', 'MANAGER', 'CASHIER', 'SUPPORT', 'INVENTORY_CLERK'] as const;
+const ALL_ROLES = [
+  'OWNER',
+  'MANAGER',
+  'CASHIER',
+  'SUPPORT',
+  'INVENTORY_CLERK',
+] as const;
 const ALL_PERMISSIONS = Object.values(Permission);
 
 describe('Permission matrix', () => {
@@ -59,19 +69,29 @@ describe('Role spot-checks', () => {
 
   // CASHIER: sell + fulfill, no cancel/refund/delete
   it('CASHIER can confirm orders', () => {
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_CONFIRM)).toBe(true);
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_CONFIRM)).toBe(
+      true,
+    );
   });
   it('CASHIER can fulfill orders', () => {
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_FULFILL)).toBe(true);
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_FULFILL)).toBe(
+      true,
+    );
   });
   it('CASHIER cannot cancel orders', () => {
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_CANCEL)).toBe(false);
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_CANCEL)).toBe(
+      false,
+    );
   });
   it('CASHIER cannot reopen orders', () => {
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_REOPEN)).toBe(false);
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_REOPEN)).toBe(
+      false,
+    );
   });
   it('CASHIER cannot refund orders', () => {
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_REFUND)).toBe(false);
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_REFUND)).toBe(
+      false,
+    );
   });
   it('CASHIER cannot delete orders', () => {
     expect(hasPermission('CASHIER', Permission.ORDERS_DELETE)).toBe(false);
@@ -97,31 +117,49 @@ describe('Role spot-checks', () => {
     expect(hasPermission('SUPPORT', Permission.AUDIT_LOGS_READ)).toBe(false);
   });
   it('SUPPORT cannot transition orders', () => {
-    expect(hasPermission('SUPPORT', Permission.ORDERS_TRANSITION_CONFIRM)).toBe(false);
-    expect(hasPermission('SUPPORT', Permission.ORDERS_TRANSITION_CANCEL)).toBe(false);
+    expect(hasPermission('SUPPORT', Permission.ORDERS_TRANSITION_CONFIRM)).toBe(
+      false,
+    );
+    expect(hasPermission('SUPPORT', Permission.ORDERS_TRANSITION_CANCEL)).toBe(
+      false,
+    );
   });
 
   // INVENTORY_CLERK: inventory ops + read-only elsewhere
   it('INVENTORY_CLERK can adjust inventory', () => {
-    expect(hasPermission('INVENTORY_CLERK', Permission.INVENTORY_ADJUST)).toBe(true);
+    expect(hasPermission('INVENTORY_CLERK', Permission.INVENTORY_ADJUST)).toBe(
+      true,
+    );
   });
   it('INVENTORY_CLERK can count inventory', () => {
-    expect(hasPermission('INVENTORY_CLERK', Permission.INVENTORY_COUNT)).toBe(true);
+    expect(hasPermission('INVENTORY_CLERK', Permission.INVENTORY_COUNT)).toBe(
+      true,
+    );
   });
   it('INVENTORY_CLERK can read products', () => {
-    expect(hasPermission('INVENTORY_CLERK', Permission.PRODUCTS_READ)).toBe(true);
+    expect(hasPermission('INVENTORY_CLERK', Permission.PRODUCTS_READ)).toBe(
+      true,
+    );
   });
   it('INVENTORY_CLERK cannot create products', () => {
-    expect(hasPermission('INVENTORY_CLERK', Permission.PRODUCTS_CREATE)).toBe(false);
+    expect(hasPermission('INVENTORY_CLERK', Permission.PRODUCTS_CREATE)).toBe(
+      false,
+    );
   });
   it('INVENTORY_CLERK cannot read orders', () => {
-    expect(hasPermission('INVENTORY_CLERK', Permission.ORDERS_READ)).toBe(false);
+    expect(hasPermission('INVENTORY_CLERK', Permission.ORDERS_READ)).toBe(
+      false,
+    );
   });
   it('INVENTORY_CLERK cannot read customers', () => {
-    expect(hasPermission('INVENTORY_CLERK', Permission.CUSTOMERS_READ)).toBe(false);
+    expect(hasPermission('INVENTORY_CLERK', Permission.CUSTOMERS_READ)).toBe(
+      false,
+    );
   });
   it('INVENTORY_CLERK cannot read audit logs', () => {
-    expect(hasPermission('INVENTORY_CLERK', Permission.AUDIT_LOGS_READ)).toBe(false);
+    expect(hasPermission('INVENTORY_CLERK', Permission.AUDIT_LOGS_READ)).toBe(
+      false,
+    );
   });
 });
 
@@ -149,11 +187,21 @@ describe('Transition permissions', () => {
   });
 
   it('CASHIER has only confirm and fulfill', () => {
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_CONFIRM)).toBe(true);
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_FULFILL)).toBe(true);
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_CANCEL)).toBe(false);
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_REOPEN)).toBe(false);
-    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_REFUND)).toBe(false);
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_CONFIRM)).toBe(
+      true,
+    );
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_FULFILL)).toBe(
+      true,
+    );
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_CANCEL)).toBe(
+      false,
+    );
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_REOPEN)).toBe(
+      false,
+    );
+    expect(hasPermission('CASHIER', Permission.ORDERS_TRANSITION_REFUND)).toBe(
+      false,
+    );
   });
 
   it('SUPPORT has no transition permissions', () => {
