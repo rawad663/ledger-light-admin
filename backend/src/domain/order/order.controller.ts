@@ -17,7 +17,6 @@ import {
 } from '@src/common/decorators/permissions.decorator';
 import { hasPermission } from '@src/common/guards/permissions.guard';
 import { Permission } from '@src/common/permissions';
-import { Role } from '@prisma/generated/enums';
 import { OrderService } from './order.service';
 import {
   type CurrentOrg,
@@ -93,7 +92,7 @@ export class OrderController {
     @Body() data: TransitionStatusBodyDto,
   ) {
     const required = TRANSITION_PERMISSION[data.toStatus];
-    if (!hasPermission(org.role as Role, required)) {
+    if (!hasPermission(org.role, required)) {
       throw new ForbiddenException('Insufficient permissions');
     }
     return this.orderService.transitionStatus(org.organizationId, id, data);

@@ -18,8 +18,8 @@ import { Role } from '@prisma/generated/enums';
  * Returns true if the given role has the specified permission.
  * Exported for use in controller-level fine-grained checks (e.g. transition-status).
  */
-export function hasPermission(role: string, permission: Permission): boolean {
-  const rolePerms = ROLE_PERMISSIONS[role as Role] ?? [];
+export function hasPermission(role: Role, permission: Permission): boolean {
+  const rolePerms = ROLE_PERMISSIONS[role] ?? [];
   return (
     rolePerms.includes(WILDCARD_PERMISSION) || rolePerms.includes(permission)
   );
