@@ -49,6 +49,16 @@ const editProductSchema = z.object({
       },
       { message: "Price must be a non-negative number" },
     ),
+  reorderThreshold: z
+    .string()
+    .min(1, "Reorder threshold is required")
+    .refine(
+      (val) => {
+        const num = Number.parseInt(val, 10);
+        return !Number.isNaN(num) && num >= 0;
+      },
+      { message: "Reorder threshold must be a whole number" },
+    ),
   category: z.string().optional(),
   customCategory: z.string().optional(),
   active: z.boolean(),
@@ -81,6 +91,7 @@ export function EditProductForm({
       name: "",
       sku: "",
       price: "",
+      reorderThreshold: "10",
       category: "",
       customCategory: "",
       active: true,
@@ -102,6 +113,7 @@ export function EditProductForm({
         name: product.name,
         sku: product.sku,
         price: (product.priceCents / 100).toFixed(2),
+        reorderThreshold: String(product.reorderThreshold),
         category: isCustom ? "__other__" : productCategory,
         customCategory: isCustom ? productCategory : "",
         active: product.active,
@@ -117,6 +129,7 @@ export function EditProductForm({
     setApiError(null);
 
     const priceCents = Math.round(parseFloat(values.price) * 100);
+    const reorderThreshold = Number.parseInt(values.reorderThreshold, 10);
     const resolvedCategory =
       values.category === "__other__"
         ? values.customCategory?.trim() || null
@@ -127,6 +140,9 @@ export function EditProductForm({
     if (values.name !== product.name) body.name = values.name;
     if (values.sku !== product.sku) body.sku = values.sku;
     if (priceCents !== product.priceCents) body.priceCents = priceCents;
+    if (reorderThreshold !== product.reorderThreshold) {
+      body.reorderThreshold = reorderThreshold;
+    }
     if (resolvedCategory !== (product.category ?? null))
       body.category = resolvedCategory;
     if (values.active !== product.active) body.active = values.active;
@@ -212,6 +228,26 @@ export function EditProductForm({
                       step="0.01"
                       min="0"
                       placeholder="0.00"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="reorderThreshold"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reorder Threshold</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="10"
                       {...field}
                     />
                   </FormControl>

@@ -60,7 +60,6 @@ type InventoryLevel = components["schemas"]["InventoryLevelsDataDto"];
 type LocationDto = components["schemas"]["LocationDto"];
 
 export const INVENTORY_PAGE_LIMIT = 50;
-const LOW_STOCK_THRESHOLD = 10;
 
 type InventoryPageProps = {
   inventoryLevels: InventoryLevel[];
@@ -288,7 +287,7 @@ export function InventoryPage({
                 {sortedInventoryLevels.map((item) => {
                   const stockStatus = getInventoryStockStatus(
                     item.quantity,
-                    LOW_STOCK_THRESHOLD,
+                    item.product.reorderThreshold,
                   );
 
                   return (
@@ -317,7 +316,7 @@ export function InventoryPage({
                         <span
                           className={cn(
                             "font-medium",
-                            item.quantity <= LOW_STOCK_THRESHOLD &&
+                            item.quantity <= item.product.reorderThreshold &&
                               "text-destructive",
                           )}
                         >
