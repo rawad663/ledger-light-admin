@@ -9,13 +9,13 @@ import {
 } from '@src/common/guards';
 import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
-import { OrderStatus } from '@prisma/generated/enums';
+import { OrderStatus, Role } from '@prisma/generated/enums';
 
 describe('OrderController', () => {
   let controller: OrderController;
   let service: jest.Mocked<OrderService>;
 
-  const org = { organizationId: 'org-1', role: 'MANAGER' };
+  const org = { organizationId: 'org-1', role: 'MANAGER' as Role };
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -115,7 +115,7 @@ describe('OrderController', () => {
     });
 
     it('CASHIER can confirm an order', async () => {
-      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' };
+      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' as Role };
       const result = { id: 'order-1', status: OrderStatus.CONFIRMED } as any;
       service.transitionStatus.mockResolvedValue(result);
 
@@ -128,7 +128,7 @@ describe('OrderController', () => {
     });
 
     it('CASHIER can fulfill an order', async () => {
-      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' };
+      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' as Role };
       const result = { id: 'order-1', status: OrderStatus.FULFILLED } as any;
       service.transitionStatus.mockResolvedValue(result);
 
@@ -141,7 +141,7 @@ describe('OrderController', () => {
     });
 
     it('CASHIER cannot cancel an order', () => {
-      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' };
+      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' as Role };
 
       expect(() =>
         controller.transitionStatus(cashierOrg, 'order-1', {
@@ -151,7 +151,7 @@ describe('OrderController', () => {
     });
 
     it('CASHIER cannot reopen an order', () => {
-      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' };
+      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' as Role };
 
       expect(() =>
         controller.transitionStatus(cashierOrg, 'order-1', {
@@ -161,7 +161,7 @@ describe('OrderController', () => {
     });
 
     it('CASHIER cannot refund an order', () => {
-      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' };
+      const cashierOrg = { organizationId: 'org-1', role: 'CASHIER' as Role };
 
       expect(() =>
         controller.transitionStatus(cashierOrg, 'order-1', {

@@ -173,7 +173,12 @@ describe('ProductService', () => {
 
   describe('createProduct', () => {
     it('creates with active=true and organizationId', async () => {
-      const body = { name: 'Widget', sku: 'W-1', priceCents: 1000 } as any;
+      const body = {
+        name: 'Widget',
+        sku: 'W-1',
+        priceCents: 1000,
+        reorderThreshold: 10,
+      } as any;
       const created = { id: 'p1', active: true, ...body };
       (prisma.product.create as jest.Mock).mockResolvedValue(created);
 
@@ -200,6 +205,7 @@ describe('ProductService', () => {
         name: 'Test Product',
         sku: 'TP-1',
         priceCents: 1000,
+        reorderThreshold: 10,
       };
 
       const createdProduct = { id: productId, active: true, ...productBody };

@@ -9,6 +9,7 @@ describe('ProductDto validation', () => {
     name: 'Widget',
     sku: 'WID-001',
     priceCents: 1500,
+    reorderThreshold: 10,
     active: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -26,6 +27,7 @@ describe('ProductDto validation', () => {
       id: 'not-uuid',
       organizationId: 'also-bad',
       priceCents: -10,
+      reorderThreshold: -1,
       active: 'yes',
       createdAt: 'x',
     } as any;
@@ -45,6 +47,7 @@ describe('GetProductsResponseDto validation', () => {
           name: 'Widget',
           sku: 'WID-001',
           priceCents: 1500,
+          reorderThreshold: 10,
           active: true,
           createdAt: new Date(),
           updatedAt: new Date(),
