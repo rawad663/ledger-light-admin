@@ -130,12 +130,25 @@ async function main() {
 
   // Products
   const productInputs = [
-    { name: 'Intentional Tee', sku: 'WID-A', priceCents: 1000, active: true },
-    { name: 'Intentional Pants', sku: 'WID-B', priceCents: 1500, active: true },
+    {
+      name: 'Intentional Tee',
+      sku: 'WID-A',
+      priceCents: 1000,
+      reorderThreshold: 12,
+      active: true,
+    },
+    {
+      name: 'Intentional Pants',
+      sku: 'WID-B',
+      priceCents: 1500,
+      reorderThreshold: 8,
+      active: true,
+    },
     {
       name: 'Intentional Shorts',
       sku: 'WID-C',
       priceCents: 2500,
+      reorderThreshold: 6,
       active: true,
     },
   ];

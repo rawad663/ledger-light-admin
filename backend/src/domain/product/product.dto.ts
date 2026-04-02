@@ -41,6 +41,11 @@ export class ProductDto {
   @Min(0)
   priceCents: number;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  reorderThreshold: number;
+
   @IsBoolean()
   active: boolean;
 
@@ -70,6 +75,7 @@ export class CreateProductDto extends PickType(ProductDto, [
   'name',
   'sku',
   'priceCents',
+  'reorderThreshold',
   'category',
 ] as const) {
   @IsOptional()
@@ -96,6 +102,12 @@ export class UpdateProductDto {
   @IsNumber()
   @Min(0)
   priceCents?: number;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  reorderThreshold?: number;
 
   @Type(() => Boolean)
   @IsOptional()

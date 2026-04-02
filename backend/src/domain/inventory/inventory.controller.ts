@@ -8,11 +8,11 @@ import {
   type CurrentOrg,
 } from '@src/common/decorators/current-org.decorator';
 import { InventoryService } from './inventory.service';
-import { PaginationOptionsQueryParamDto } from '@src/common/dto/pagination.dto';
 import {
   CreateAdjustmentBodyDto,
   CreateAdjustmentResponseDto,
   GetAggregatedInventoryResponseDto,
+  GetInventoryQueryDto,
   GetInventoryLevelsResponseDto,
   GetLevelsQueryDto,
 } from './inventory.dto';
@@ -36,11 +36,17 @@ export class InventoryController {
     description:
       'Returns paginated total quantity per product and breakdown by locations for the active organization.',
     ok: GetAggregatedInventoryResponseDto,
-    queries: appendToPaginationQuery([]),
+    queries: appendToPaginationQuery([
+      {
+        name: 'lowStockOnly',
+        description: 'Show only products below their reorder threshold',
+        type: Boolean,
+      },
+    ]),
   })
   getInventory(
     @CurrentOrganization() org: CurrentOrg,
-    @Query() query: PaginationOptionsQueryParamDto,
+    @Query() query: GetInventoryQueryDto,
   ) {
     return this.inventoryService.getInventory(org.organizationId, query);
   }

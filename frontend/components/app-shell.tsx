@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { canAccessDashboard } from "@/lib/dashboard-access";
 import { formatEnumLabel, getInitials } from "@/lib/formatters";
 import type { JwtUser } from "@/lib/jwt";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, memberships, currentOrg, currentRole, switchOrganization } =
     useAuth();
+  const visibleNavigation = React.useMemo(
+    () =>
+      navigation.filter((item) =>
+        item.href === "/" ? canAccessDashboard(currentRole) : true,
+      ),
+    [currentRole],
+  );
 
   const displayName = user ? getDisplayName(user) : "";
   const initials = displayName ? getInitials(displayName) : "";
@@ -141,7 +149,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-3">
           <ul className="flex flex-col gap-1">
-            {navigation.map((item) => {
+            {visibleNavigation.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/" && pathname.startsWith(item.href));

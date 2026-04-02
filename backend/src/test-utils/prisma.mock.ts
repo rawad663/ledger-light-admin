@@ -9,6 +9,7 @@ export const createPrismaMock = (tx?: Record<string, any>) => {
 
     // Models used across services
     customer: {
+      count: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
@@ -27,6 +28,7 @@ export const createPrismaMock = (tx?: Record<string, any>) => {
       findMany: jest.fn(),
       count: jest.fn(),
       create: jest.fn(),
+      upsert: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },

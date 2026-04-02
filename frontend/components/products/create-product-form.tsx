@@ -49,6 +49,16 @@ const createProductSchema = z
         },
         { message: "Price must be a positive number" },
       ),
+    reorderThreshold: z
+      .string()
+      .min(1, "Reorder threshold is required")
+      .refine(
+        (val) => {
+          const num = Number.parseInt(val, 10);
+          return !Number.isNaN(num) && num >= 0;
+        },
+        { message: "Reorder threshold must be a whole number" },
+      ),
     category: z.string().optional(),
     customCategory: z.string().optional(),
     locationId: z.string().optional(),
@@ -105,6 +115,7 @@ export function CreateProductForm({
       name: "",
       sku: "",
       price: "",
+      reorderThreshold: "10",
       category: "",
       customCategory: "",
       locationId: "",
@@ -129,6 +140,7 @@ export function CreateProductForm({
     setApiError(null);
 
     const priceCents = Math.round(parseFloat(values.price) * 100);
+    const reorderThreshold = Number.parseInt(values.reorderThreshold, 10);
     const resolvedCategory =
       values.category === "__other__"
         ? values.customCategory?.trim() || null
@@ -138,6 +150,7 @@ export function CreateProductForm({
       name: values.name,
       sku: values.sku,
       priceCents,
+      reorderThreshold,
       category: resolvedCategory,
     };
 
@@ -222,6 +235,26 @@ export function CreateProductForm({
                       step="0.01"
                       min="0"
                       placeholder="0.00"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="reorderThreshold"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reorder Threshold</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="10"
                       {...field}
                     />
                   </FormControl>

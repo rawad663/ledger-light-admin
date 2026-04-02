@@ -195,6 +195,7 @@ model Product {
   category       String?       @db.VarChar(200)
   sku            String        @db.VarChar(80)
   priceCents     Int
+  reorderThreshold Int         @default(10)
   active         Boolean       @default(true)
 
   createdAt      DateTime      @default(now())

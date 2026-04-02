@@ -260,6 +260,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get dashboard summary */
+        get: operations["DashboardController_getSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dashboard/sales-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get dashboard sales overview */
+        get: operations["DashboardController_getSalesOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/inventory/levels": {
         parameters: {
             query?: never;
@@ -590,6 +624,7 @@ export interface components {
             category?: string | null;
             sku: string;
             priceCents: number;
+            reorderThreshold: number;
             active: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -613,6 +648,7 @@ export interface components {
             name: string;
             sku: string;
             priceCents: number;
+            reorderThreshold: number;
             category?: string | null;
         };
         UpdateProductDto: {
@@ -620,11 +656,13 @@ export interface components {
             sku?: string;
             category?: string | null;
             priceCents?: number;
+            reorderThreshold?: number;
             active?: boolean;
         };
         AggregatedInventoryLocationDto: {
             /** Format: uuid */
             locationId: string;
+            locationName: string;
             quantity: number;
         };
         AggregatedInventoryItemDto: {
@@ -633,12 +671,46 @@ export interface components {
             name: string;
             sku: string;
             totalQuantity: number;
+            reorderThreshold: number;
+            stockGap: number;
+            isLowStock: boolean;
             locations: components["schemas"]["AggregatedInventoryLocationDto"][];
         };
         GetAggregatedInventoryResponseDto: {
             data: components["schemas"]["AggregatedInventoryItemDto"][];
             nextCursor?: string;
             totalCount: number;
+        };
+        DashboardSummaryDto: {
+            todaysSalesCents: number;
+            ordersTodayCount: number;
+            lowStockItemsCount: number;
+            activeCustomersCount: number;
+        };
+        DashboardSalesBucketDto: {
+            /** Format: date-time */
+            bucketStart: string;
+            /** Format: date-time */
+            bucketEnd: string;
+            label: string;
+            salesCents: number;
+        };
+        DashboardSalesOverviewDto: {
+            /** @enum {string} */
+            timeline: "day" | "week" | "month";
+            /** Format: date-time */
+            anchor: string;
+            /** Format: date-time */
+            periodStart: string;
+            /** Format: date-time */
+            periodEnd: string;
+            /** Format: date-time */
+            previousAnchor: string;
+            /** Format: date-time */
+            nextAnchor: string;
+            isCurrentPeriod: boolean;
+            totalSalesCents: number;
+            buckets: components["schemas"]["DashboardSalesBucketDto"][];
         };
         LocationDto: {
             /** Format: uuid */
@@ -2015,6 +2087,8 @@ export interface operations {
     InventoryController_getInventory: {
         parameters: {
             query?: {
+                /** @description Show only products below their reorder threshold */
+                lowStockOnly?: boolean;
                 /** @description Max items per page (1-100) */
                 limit?: number;
                 /** @description Pagination cursor */
@@ -2040,6 +2114,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GetAggregatedInventoryResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (invalid/missing organization context) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DashboardController_getSummary: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Active organization context for the request. Must be an organization the user is a member of. */
+                "X-Organization-Id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummaryDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (invalid/missing organization context) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DashboardController_getSalesOverview: {
+        parameters: {
+            query?: {
+                /** @description Calendar timeline to visualize sales for. */
+                timeline?: "day" | "week" | "month";
+                /** @description Optional ISO datetime used to resolve the requested calendar period. */
+                anchor?: string;
+            };
+            header: {
+                /** @description Active organization context for the request. Must be an organization the user is a member of. */
+                "X-Organization-Id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSalesOverviewDto"];
                 };
             };
             /** @description Validation failed */
