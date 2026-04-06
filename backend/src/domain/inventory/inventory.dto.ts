@@ -70,6 +70,13 @@ export class GetLevelsQueryDto extends PaginationOptionsQueryParamDto {
   lowStockOnly?: boolean;
 }
 
+export class GetInventoryQueryDto extends PaginationOptionsQueryParamDto {
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  lowStockOnly?: boolean;
+}
+
 export class CreateInventoryLevelDto extends PickType(InventoryLevelDto, [
   'productId',
   'locationId',
@@ -111,6 +118,9 @@ export class AggregatedInventoryLocationDto {
   @IsUUID('loose')
   locationId: string;
 
+  @IsString()
+  locationName: string;
+
   @Type(() => Number)
   @IsInt()
   @Min(0)
@@ -132,6 +142,18 @@ export class AggregatedInventoryItemDto {
   @IsInt()
   @Min(0)
   totalQuantity: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  reorderThreshold: number;
+
+  @Type(() => Number)
+  @IsInt()
+  stockGap: number;
+
+  @IsBoolean()
+  isLowStock: boolean;
 
   @ValidateNested({ each: true })
   @Type(() => AggregatedInventoryLocationDto)

@@ -81,6 +81,7 @@ describe('ProductController', () => {
         name: 'Widget',
         sku: 'WID-001',
         priceCents: 1000,
+        reorderThreshold: 10,
       } as any;
       const result = { id: 'p-new' } as any;
       service.createProduct.mockResolvedValue(result);

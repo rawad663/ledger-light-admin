@@ -28,36 +28,54 @@ Every request flows through a guard chain:
 
 1. **JwtAuthGuard** — validates the Bearer token (15-minute expiry, HS256)
 2. **OrganizationContextGuard** — reads the `X-Organization-Id` header and verifies the user has a membership in that org
-3. **RolesGuard** — checks the user's role (`ADMIN`, `MANAGER`, `SUPPORT`) against the endpoint's requirements
+3. **PermissionsGuard** — derives the user's permitted actions from a `ROLE_PERMISSIONS` map and enforces them against the endpoint's declared requirements
 
-These are composed via decorators like `@OrgProtected()` and `@Authorized('ADMIN', 'MANAGER')`, which stack the appropriate guards automatically. User memberships are embedded directly in the JWT payload to avoid a database query on every request; they stay fresh because tokens expire after 15 minutes.
+These are composed via `@OrgProtected()` at the controller level and `@RequirePermissions(Permission.X)` (all-of) or `@RequireAnyPermission(Permission.X)` (any-of) at the method level.
+
+User memberships are embedded directly in the JWT payload to avoid a database query on every request; they stay fresh because tokens expire after 15 minutes.
 
 Passwords are hashed with `bcryptjs` (async), and refresh tokens are stored as bcrypt hashes with expiration and revocation support.
 
-### 1.2 Input Validation & Query Safety
+### 1.2 Role-Based Access Control (RBAC)
+
+The system uses five roles with granular, capability-scoped permissions:
+
+| Role | Description |
+|------|-------------|
+| `OWNER` | Full access (wildcard `*`) |
+| `MANAGER` | Full operational access across all domains |
+| `CASHIER` | Sales-focused — can sell and fulfill but cannot cancel, refund, or delete |
+| `SUPPORT` | Read-only across all domains |
+| `INVENTORY_CLERK` | Inventory read and adjustment only |
+
+Permissions are grouped by domain (e.g. `orders.read`, `orders.transition.cancel`, `inventory.adjust`) and evaluated per organization membership, so a user can have different roles in different organizations.
+
+See [plans/RBAC Implementation Plan.md](plans/RBAC%20Implementation%20Plan.md) for the full permission matrix, architecture decisions, and migration details.
+
+### 1.3 Input Validation & Query Safety
 
 A global `ValidationPipe` is configured with `whitelist: true` and `forbidNonWhitelisted: true`, meaning unknown fields are rejected outright. Every DTO uses `class-validator` decorators (`@IsEmail`, `@Min(0)`, `@IsUUID`, etc.) for type-safe validation at the boundary.
 
 All database access goes through Prisma ORM — there are no raw SQL queries with user input, eliminating SQL injection as a vector.
 
-### 1.3 Rate Limiting & Security Headers
+### 1.4 Rate Limiting & Security Headers
 
 Rate limiting is applied globally via `@nestjs/throttler` (100 requests/minute per client). The login endpoint has a stricter limit of 5 attempts per 15 minutes to guard against brute-force attacks.
 
 The `helmet` middleware sets standard security headers (CSP, X-Frame-Options, HSTS, etc.) on all responses.
 
-### 1.4 Data Integrity
+### 1.5 Data Integrity
 
 Operations that touch multiple tables are wrapped in Prisma interactive transactions (`$transaction`). For example:
 - **Order creation** — creates the order, validates product snapshots, and inserts all line items atomically
 - **Inventory adjustments** — finds-or-creates the inventory level, updates the quantity, and logs the adjustment in one transaction
 - **Product creation with initial stock** — creates the product, inventory level, and adjustment together
 
-### 1.5 Multi-Tenancy
+### 1.6 Multi-Tenancy
 
 All domain queries are scoped by `organizationId`. The schema enforces this with composite indexes and unique constraints (e.g., SKU is unique *per organization*, not globally). The `OrganizationContextGuard` validates membership before any data access occurs, preventing cross-tenant leakage.
 
-### 1.6 Environment & Configuration
+### 1.7 Environment & Configuration
 
 | Variable | Purpose |
 |----------|---------|
@@ -68,7 +86,7 @@ All domain queries are scoped by `organizationId`. The schema enforces this with
 
 Configuration is loaded via `@nestjs/config` (global `ConfigModule`). Sensitive values like the JWT secret use `getOrThrow()` so misconfigurations surface immediately at startup.
 
-### 1.7 Dev vs Production
+### 1.8 Dev vs Production
 
 The same codebase supports both environments through Docker Compose layering:
 
