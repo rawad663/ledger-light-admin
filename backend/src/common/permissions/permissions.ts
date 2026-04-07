@@ -38,6 +38,7 @@ export const Permission = {
 
   // Users & roles (no routes yet — reserved for forward compatibility)
   USERS_READ: 'users.read',
+  USERS_INVITE: 'users.invite',
   USERS_MANAGE: 'users.manage',
   ROLES_MANAGE: 'roles.manage',
 

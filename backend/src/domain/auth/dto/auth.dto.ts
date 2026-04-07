@@ -3,12 +3,14 @@ import {
   IsBoolean,
   IsDate,
   IsEmail,
+  IsEnum,
   IsOptional,
+  IsArray,
   IsString,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
-import { Role } from '@prisma/generated/enums';
+import { MembershipStatus, Role } from '@prisma/generated/enums';
 
 export class OrganizationDto {
   @IsString()
@@ -38,7 +40,17 @@ export class MembershipDto {
   @IsUUID('loose')
   userId: string;
 
+  @IsEnum(MembershipStatus)
+  status: MembershipStatus;
+
   role: Role;
+
+  @IsBoolean()
+  hasAllLocations: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  allowedLocationIds: string[];
 
   @IsDate()
   createdAt: Date;

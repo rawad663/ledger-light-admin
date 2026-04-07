@@ -1,8 +1,16 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { type CurrentOrg } from '@src/common/decorators/current-org.decorator';
+import {
+  ensureLocationAccessible,
+  getLocationScopeWhere,
+  hasRestrictedLocations,
+  resolveOrganizationScope,
+} from '@src/common/organization/location-scope';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
 import {
   CreateOrderDto,
@@ -21,18 +29,27 @@ import { Prisma } from '@prisma/generated/client';
 export class OrderService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async createOrder(orgId: string, data: CreateOrderDto) {
+  async createOrder(organization: CurrentOrg | string, data: CreateOrderDto) {
+    const org = resolveOrganizationScope(organization);
     const { orderItems, customerId, locationId } = data;
 
     if (!orderItems?.length) {
       throw new BadRequestException('Order must contain at least one item');
     }
 
+    if (hasRestrictedLocations(org)) {
+      ensureLocationAccessible(org, locationId, {
+        allowUnspecified: false,
+        missingMessage:
+          'A location is required when creating orders for a scoped membership',
+      });
+    }
+
     return this.prismaService.$transaction(async (tx) => {
       // Verify validity of optional references within org
       if (customerId) {
         const ok = await tx.customer.findFirst({
-          where: { id: customerId, organizationId: orgId },
+          where: { id: customerId, organizationId: org.organizationId },
           select: { id: true },
         });
         if (!ok)
@@ -40,7 +57,11 @@ export class OrderService {
       }
       if (locationId) {
         const ok = await tx.location.findFirst({
-          where: { id: locationId, organizationId: orgId },
+          where: {
+            id: locationId,
+            organizationId: org.organizationId,
+            ...getLocationScopeWhere(org),
+          },
           select: { id: true },
         });
         if (!ok)
@@ -50,7 +71,11 @@ export class OrderService {
       // Snapshot products by ID and org
       const productIds = [...new Set(orderItems.map((i) => i.productId))];
       const products = await tx.product.findMany({
-        where: { id: { in: productIds }, organizationId: orgId, active: true },
+        where: {
+          id: { in: productIds },
+          organizationId: org.organizationId,
+          active: true,
+        },
         select: { id: true, name: true, sku: true, priceCents: true },
       });
 
@@ -88,7 +113,7 @@ export class OrderService {
         const lineTotalCents = lineSubtotalCents - discountCents + taxCents;
 
         computedLineItems.push({
-          organizationId: orgId,
+          organizationId: org.organizationId,
           productId: raw.productId,
           productName: p.name,
           sku: p.sku ?? undefined,
@@ -113,7 +138,7 @@ export class OrderService {
             ...totals,
             customerId,
             locationId,
-            organizationId: orgId,
+            organizationId: org.organizationId,
             status: OrderStatus.PENDING,
           },
         });
@@ -139,7 +164,7 @@ export class OrderService {
           ...totals,
           customerId,
           locationId,
-          organizationId: orgId,
+          organizationId: org.organizationId,
           status: OrderStatus.PENDING,
           items: {
             create: computedLineItems.map((item) => ({
@@ -156,10 +181,11 @@ export class OrderService {
   }
 
   async transitionStatus(
-    orgId: string,
+    organization: CurrentOrg | string,
     orderId: string,
     { toStatus }: TransitionStatusBodyDto,
   ) {
+    const org = resolveOrganizationScope(organization);
     const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
       PENDING: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
       CONFIRMED: [OrderStatus.FULFILLED, OrderStatus.CANCELLED],
@@ -168,17 +194,31 @@ export class OrderService {
       REFUNDED: [],
     };
 
-    const currentOrder = await this.prismaService.order.findUnique({
-      where: { id_organizationId: { id: orderId, organizationId: orgId } },
-      select: { id: true, status: true },
-    });
-    if (!currentOrder) {
+    const currentOrderRecord = hasRestrictedLocations(org)
+      ? await this.prismaService.order.findFirst({
+          where: {
+            id: orderId,
+            organizationId: org.organizationId,
+            ...getLocationScopeWhere(org),
+          },
+          select: { id: true, status: true },
+        })
+      : await this.prismaService.order.findUnique({
+          where: {
+            id_organizationId: {
+              id: orderId,
+              organizationId: org.organizationId,
+            },
+          },
+          select: { id: true, status: true },
+        });
+    if (!currentOrderRecord) {
       throw new NotFoundException('Order not found for organization');
     }
 
-    if (!ALLOWED_TRANSITIONS[currentOrder.status].includes(toStatus)) {
+    if (!ALLOWED_TRANSITIONS[currentOrderRecord.status].includes(toStatus)) {
       throw new BadRequestException(
-        `Cannot transition from ${currentOrder.status} to ${toStatus}`,
+        `Cannot transition from ${currentOrderRecord.status} to ${toStatus}`,
       );
     }
 
@@ -188,27 +228,45 @@ export class OrderService {
       case 'CONFIRMED':
         updatedOrder = await this.prismaService.order.update({
           where: {
-            id_organizationId: { id: orderId, organizationId: orgId },
+            id_organizationId: {
+              id: orderId,
+              organizationId: org.organizationId,
+            },
           },
           data: { status: toStatus, placedAt: new Date(), cancelledAt: null },
         });
         break;
       case 'CANCELLED':
         updatedOrder = await this.prismaService.order.update({
-          where: { id_organizationId: { id: orderId, organizationId: orgId } },
+          where: {
+            id_organizationId: {
+              id: orderId,
+              organizationId: org.organizationId,
+            },
+          },
           data: { status: toStatus, cancelledAt: new Date() },
         });
         break;
       case 'PENDING':
         updatedOrder = await this.prismaService.order.update({
-          where: { id_organizationId: { id: orderId, organizationId: orgId } },
+          where: {
+            id_organizationId: {
+              id: orderId,
+              organizationId: org.organizationId,
+            },
+          },
           data: { status: toStatus, placedAt: null, cancelledAt: null },
         });
         break;
       case 'FULFILLED':
       case 'REFUNDED':
         updatedOrder = await this.prismaService.order.update({
-          where: { id_organizationId: { id: orderId, organizationId: orgId } },
+          where: {
+            id_organizationId: {
+              id: orderId,
+              organizationId: org.organizationId,
+            },
+          },
           data: { status: toStatus },
         });
         break;
@@ -219,10 +277,20 @@ export class OrderService {
     return updatedOrder;
   }
 
-  async getOrders(orgId: string, query: GetOrdersQueryDto) {
+  async getOrders(organization: CurrentOrg | string, query: GetOrdersQueryDto) {
+    const org = resolveOrganizationScope(organization);
     const { withItems, status, search, locationId, ...paginationQuery } = query;
 
-    const where: Prisma.OrderWhereInput = { organizationId: orgId };
+    if (locationId) {
+      ensureLocationAccessible(org, locationId, {
+        allowUnspecified: false,
+      });
+    }
+
+    const where: Prisma.OrderWhereInput = {
+      organizationId: org.organizationId,
+      ...getLocationScopeWhere(org),
+    };
 
     if (status) {
       where.status = status;
@@ -264,7 +332,10 @@ export class OrderService {
         { ...paginationQuery },
       ),
       this.prismaService.location.findMany({
-        where: { organizationId: orgId },
+        where: {
+          organizationId: org.organizationId,
+          ...getLocationScopeWhere(org),
+        },
         orderBy: { name: 'asc' },
         select: {
           id: true,
@@ -286,31 +357,64 @@ export class OrderService {
     };
   }
 
-  async getOrderById(orgId: string, orderId: string, query: GetOrderQueryDto) {
-    const order = await this.prismaService.order.findUnique({
-      where: { id_organizationId: { id: orderId, organizationId: orgId } },
-      include: {
-        items: query.withItems,
-        customer: { select: { id: true, name: true, email: true } },
-        location: {
-          select: {
-            id: true,
-            name: true,
-            addressLine1: true,
-            city: true,
-            stateProvince: true,
-            postalCode: true,
-            countryCode: true,
+  async getOrderById(
+    organization: CurrentOrg | string,
+    orderId: string,
+    query: GetOrderQueryDto,
+  ) {
+    const org = resolveOrganizationScope(organization);
+    const order = hasRestrictedLocations(org)
+      ? await this.prismaService.order.findFirst({
+          where: {
+            id: orderId,
+            organizationId: org.organizationId,
+            ...getLocationScopeWhere(org),
           },
-        },
-      },
-    });
+          include: {
+            items: query.withItems,
+            customer: { select: { id: true, name: true, email: true } },
+            location: {
+              select: {
+                id: true,
+                name: true,
+                addressLine1: true,
+                city: true,
+                stateProvince: true,
+                postalCode: true,
+                countryCode: true,
+              },
+            },
+          },
+        })
+      : await this.prismaService.order.findUnique({
+          where: {
+            id_organizationId: {
+              id: orderId,
+              organizationId: org.organizationId,
+            },
+          },
+          include: {
+            items: query.withItems,
+            customer: { select: { id: true, name: true, email: true } },
+            location: {
+              select: {
+                id: true,
+                name: true,
+                addressLine1: true,
+                city: true,
+                stateProvince: true,
+                postalCode: true,
+                countryCode: true,
+              },
+            },
+          },
+        });
 
     if (!order) {
       throw new NotFoundException(`Order not found`);
     }
 
-    const ok = order?.organizationId === orgId;
+    const ok = order?.organizationId === org.organizationId;
     if (!ok) {
       throw new BadRequestException(
         'Order does not belong to provided organization',
@@ -320,10 +424,15 @@ export class OrderService {
     return order;
   }
 
-  async updateOrder(orgId: string, orderId: string, data: UpdateOrderDto) {
+  async updateOrder(
+    organization: CurrentOrg | string,
+    orderId: string,
+    data: UpdateOrderDto,
+  ) {
+    const org = resolveOrganizationScope(organization);
     if (data.customerId) {
       const ok = await this.prismaService.customer.findFirst({
-        where: { id: data.customerId, organizationId: orgId },
+        where: { id: data.customerId, organizationId: org.organizationId },
         select: { id: true },
       });
       if (!ok) {
@@ -332,8 +441,16 @@ export class OrderService {
     }
 
     if (data.locationId) {
+      ensureLocationAccessible(org, data.locationId, {
+        allowUnspecified: false,
+      });
+
       const ok = await this.prismaService.location.findFirst({
-        where: { id: data.locationId, organizationId: orgId },
+        where: {
+          id: data.locationId,
+          organizationId: org.organizationId,
+          ...getLocationScopeWhere(org),
+        },
         select: { id: true },
       });
       if (!ok) {
@@ -341,38 +458,81 @@ export class OrderService {
       }
     }
 
+    if (hasRestrictedLocations(org)) {
+      await this.assertOrderAccessible(org, orderId);
+    }
+
     const updatedOrder = await this.prismaService.order.update({
-      where: { id_organizationId: { id: orderId, organizationId: orgId } },
+      where: {
+        id_organizationId: { id: orderId, organizationId: org.organizationId },
+      },
       data,
     });
 
     return updatedOrder;
   }
 
-  async deleteOrder(orgId: string, orderId: string) {
+  async deleteOrder(organization: CurrentOrg | string, orderId: string) {
+    const org = resolveOrganizationScope(organization);
+    if (hasRestrictedLocations(org)) {
+      await this.assertOrderAccessible(org, orderId);
+    }
+
     const deletedOrder = await this.prismaService.order.delete({
-      where: { id_organizationId: { id: orderId, organizationId: orgId } },
+      where: {
+        id_organizationId: { id: orderId, organizationId: org.organizationId },
+      },
     });
 
     return deletedOrder;
   }
 
-  async addOrderItem(orgId: string, orderId: string, data: CreateOrderItemDto) {
+  async addOrderItem(
+    organization: CurrentOrg | string,
+    orderId: string,
+    data: CreateOrderItemDto,
+  ) {
+    const org = resolveOrganizationScope(organization);
     return this.prismaService.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({
-        where: {
-          id_organizationId: { id: orderId, organizationId: orgId },
-          status: 'PENDING',
-        },
-        select: { id: true, items: { select: { id: true, productId: true } } },
-      });
-      if (!order)
+      const order = hasRestrictedLocations(org)
+        ? await tx.order.findFirst({
+            where: {
+              id: orderId,
+              organizationId: org.organizationId,
+              status: 'PENDING',
+              ...getLocationScopeWhere(org),
+            },
+            select: {
+              id: true,
+              status: true,
+              items: { select: { id: true, productId: true } },
+            },
+          })
+        : await tx.order.findUnique({
+            where: {
+              id_organizationId: {
+                id: orderId,
+                organizationId: org.organizationId,
+              },
+            },
+            select: {
+              id: true,
+              status: true,
+              items: { select: { id: true, productId: true } },
+            },
+          });
+      if (
+        !order ||
+        ('status' in order &&
+          order.status !== undefined &&
+          order.status !== 'PENDING')
+      )
         throw new NotFoundException(
           'Order not found for organization or is not Pending',
         );
 
       const product = await tx.product.findFirst({
-        where: { id: data.productId, organizationId: orgId },
+        where: { id: data.productId, organizationId: org.organizationId },
         select: { id: true, name: true, sku: true, priceCents: true },
       });
       if (!product) throw new BadRequestException('Invalid product');
@@ -400,7 +560,12 @@ export class OrderService {
       const lineTotalCents = lineSubtotalCents - discountCents + taxCents;
 
       const updated = await tx.order.update({
-        where: { id_organizationId: { id: orderId, organizationId: orgId } },
+        where: {
+          id_organizationId: {
+            id: orderId,
+            organizationId: org.organizationId,
+          },
+        },
         data: {
           items: {
             create: {
@@ -427,13 +592,22 @@ export class OrderService {
     });
   }
 
-  async deleteOrderItem(orgId: string, orderId: string, itemId: string) {
+  async deleteOrderItem(
+    organization: CurrentOrg | string,
+    orderId: string,
+    itemId: string,
+  ) {
+    const org = resolveOrganizationScope(organization);
     return this.prismaService.$transaction(async (tx) => {
+      if (hasRestrictedLocations(org)) {
+        await this.assertOrderAccessible(org, orderId);
+      }
+
       const item = await tx.orderItem.findFirst({
         where: {
           id: itemId,
           orderId,
-          organizationId: orgId,
+          organizationId: org.organizationId,
         },
         select: {
           id: true,
@@ -447,14 +621,17 @@ export class OrderService {
 
       // Optional: prevent removing the last item
       const count = await tx.orderItem.count({
-        where: { orderId, organizationId: orgId },
+        where: { orderId, organizationId: org.organizationId },
       });
       if (count <= 1)
         throw new BadRequestException('Order must have at least one item');
 
       const updated = await tx.order.update({
         where: {
-          id_organizationId: { id: orderId, organizationId: orgId },
+          id_organizationId: {
+            id: orderId,
+            organizationId: org.organizationId,
+          },
           status: 'PENDING',
         },
         data: {
@@ -469,5 +646,26 @@ export class OrderService {
 
       return updated;
     });
+  }
+
+  private async assertOrderAccessible(org: CurrentOrg, orderId: string) {
+    const order = await this.prismaService.order.findFirst({
+      where: {
+        id: orderId,
+        organizationId: org.organizationId,
+      },
+      select: { id: true, locationId: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (
+      hasRestrictedLocations(org) &&
+      (!order.locationId || !org.allowedLocationIds.includes(order.locationId))
+    ) {
+      throw new ForbiddenException('You do not have access to this order');
+    }
   }
 }

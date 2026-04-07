@@ -19,12 +19,16 @@
 ## Feature Structure
 
 - Route files in `app/` should stay thin and focus on server data loading plus top-level composition.
+- Route files in `app/` should use the shared `createApi()` server client instead of feature-specific fetch wrappers.
 - Feature pages should compose shared building blocks instead of recreating headers, search bars, pagination, and status helpers inline.
+- When a page needs drawers, dialogs, forms, tabs, or other dense feature sections, extract them into feature subcomponents instead of defining page-sized helper components inline.
 - Non-trivial forms should use `react-hook-form` with Zod.
 - Reusable feature UI belongs in `components/shared/` or feature subcomponents, not inside long page files when it is reused or too dense to scan.
 
 ## Shared Utilities
 
+- Client components should use `useApiClient()` or shared API hooks instead of feature-specific request wrapper modules.
+- Feature type aliases should come from generated DTOs in `lib/api-types.ts` instead of hand-maintained copies of backend response shapes.
 - Use `lib/formatters.ts` for:
   - money formatting
   - date formatting

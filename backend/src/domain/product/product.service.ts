@@ -1,4 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { type CurrentOrg } from '@src/common/decorators/current-org.decorator';
+import {
+  ensureLocationAccessible,
+  hasResolvedLocationScope,
+  resolveOrganizationScope,
+} from '@src/common/organization/location-scope';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
 import {
   CreateProductDto,
@@ -85,18 +91,25 @@ export class ProductService {
   }
 
   async createProduct(
-    organizationId: string,
+    organization: CurrentOrg | string,
     productData: CreateProductDto,
     actorUserId?: string,
   ) {
+    const org = resolveOrganizationScope(organization);
     const { inventory: inventoryData, ...rest } = productData;
+
+    if (inventoryData) {
+      ensureLocationAccessible(org, inventoryData.locationId, {
+        allowUnspecified: false,
+      });
+    }
 
     return this.prismaService.$transaction(async (tx) => {
       const product = await tx.product.create({
         data: {
           ...rest,
           active: true,
-          organizationId,
+          organizationId: org.organizationId,
         },
       });
 
@@ -108,17 +121,24 @@ export class ProductService {
 
       if (inventoryData !== undefined) {
         const { locationId, quantity, note } = inventoryData;
+        const adjustmentData = {
+          organizationId: org.organizationId,
+          actorUserId,
+          productId: product.id,
+          locationId,
+          delta: quantity,
+          reason: 'INITIAL_STOCK' as const,
+          ...(note !== undefined ? { note } : {}),
+          ...(hasResolvedLocationScope(organization)
+            ? { organization: org }
+            : {}),
+        };
 
         const { inventoryLevel, adjustment } =
-          await this.inventoryService.createAdjustmentWithTx(tx, {
-            organizationId,
-            actorUserId,
-            productId: product.id,
-            locationId,
-            delta: quantity,
-            reason: 'INITIAL_STOCK',
-            note,
-          });
+          await this.inventoryService.createAdjustmentWithTx(
+            tx,
+            adjustmentData,
+          );
 
         result.inventoryLevel = inventoryLevel;
         result.adjustment = adjustment;

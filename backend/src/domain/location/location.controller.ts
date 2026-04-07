@@ -20,6 +20,7 @@ import {
   ApiDoc,
   appendToPaginationQuery,
 } from '@src/common/swagger/api-doc.decorator';
+import { toOrganizationScopeInput } from '@src/common/organization/location-scope';
 import {
   CreateLocationDto,
   GetLocationsQueryDto,
@@ -63,7 +64,10 @@ export class LocationController {
     @CurrentOrganization() org: CurrentOrg,
     @Query() query: GetLocationsQueryDto,
   ) {
-    return this.locationService.getLocations(org.organizationId, query);
+    return this.locationService.getLocations(
+      toOrganizationScopeInput(org),
+      query,
+    );
   }
 
   @Get(':id')
@@ -78,7 +82,10 @@ export class LocationController {
     @CurrentOrganization() org: CurrentOrg,
     @Param('id') id: string,
   ) {
-    return this.locationService.getLocationById(org.organizationId, id);
+    return this.locationService.getLocationById(
+      toOrganizationScopeInput(org),
+      id,
+    );
   }
 
   @Post()
@@ -94,7 +101,7 @@ export class LocationController {
     @Body() locationData: CreateLocationDto,
   ) {
     return this.locationService.createLocation(
-      org.organizationId,
+      toOrganizationScopeInput(org),
       locationData,
     );
   }
@@ -115,7 +122,7 @@ export class LocationController {
     @Body() locationData: UpdateLocationDto,
   ) {
     return this.locationService.updateLocation(
-      org.organizationId,
+      toOrganizationScopeInput(org),
       id,
       locationData,
     );
@@ -135,6 +142,9 @@ export class LocationController {
     @CurrentOrganization() org: CurrentOrg,
     @Param('id') id: string,
   ) {
-    return this.locationService.deleteLocation(org.organizationId, id);
+    return this.locationService.deleteLocation(
+      toOrganizationScopeInput(org),
+      id,
+    );
   }
 }

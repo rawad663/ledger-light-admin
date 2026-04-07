@@ -20,6 +20,15 @@ export const CustomerStatus = {
 export type CustomerStatus =
   (typeof CustomerStatus)[keyof typeof CustomerStatus];
 
+export const MembershipStatus = {
+  INVITED: 'INVITED',
+  ACTIVE: 'ACTIVE',
+  DEACTIVATED: 'DEACTIVATED',
+} as const;
+
+export type MembershipStatus =
+  (typeof MembershipStatus)[keyof typeof MembershipStatus];
+
 export const LocationType = {
   STORE: 'STORE',
   WAREHOUSE: 'WAREHOUSE',

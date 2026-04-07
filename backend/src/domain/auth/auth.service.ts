@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 
 import { LoginDto, RefreshTokenDto } from './dto/login.dto';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
+import { MembershipStatus } from '@prisma/generated/enums';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +19,7 @@ export class AuthService {
       where: { email },
     });
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || !user.passwordHash) {
       throw new UnauthorizedException(
         'Invalid credentials, user not found or inactive',
       );
@@ -44,29 +45,50 @@ export class AuthService {
       omit: { tokenHash: true },
     });
 
-    const updatedUser = await this.prismaService.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-      omit: { passwordHash: true },
-    });
+    const { memberships, ...updatedUser } =
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+        omit: { passwordHash: true },
+        include: {
+          memberships: {
+            where: { status: MembershipStatus.ACTIVE },
+            include: {
+              organization: true,
+              locations: {
+                select: {
+                  locationId: true,
+                },
+              },
+            },
+          },
+        },
+      });
 
-    const memberships = await this.prismaService.membership.findMany({
-      where: { userId: user.id },
-      include: { organization: true },
-    });
+    if (memberships.length === 0) {
+      throw new UnauthorizedException(
+        'Invalid credentials, user has no active organization memberships',
+      );
+    }
 
     const payload = {
       sub: user.id,
       user: updatedUser,
-      memberships: memberships.map((m) => ({
-        id: m.id,
-        userId: m.userId,
-        organizationId: m.organizationId,
-        organizationName: m.organization.name,
-        role: m.role,
-      })),
+      memberships: memberships.map((membership) =>
+        this.serializeJwtMembership(membership),
+      ),
     };
     const accessToken = await this.jwtService.signAsync(payload);
+
+    await this.prismaService.auditLog.createMany({
+      data: memberships.map((membership) => ({
+        organizationId: membership.organizationId,
+        actorUserId: user.id,
+        entityType: 'USER',
+        entityId: user.id,
+        action: 'LOGIN',
+      })),
+    });
 
     return {
       accessToken,
@@ -111,20 +133,27 @@ export class AuthService {
     }
 
     const memberships = await this.prismaService.membership.findMany({
-      where: { userId: user.id },
-      include: { organization: true },
+      where: { userId: user.id, status: MembershipStatus.ACTIVE },
+      include: {
+        organization: true,
+        locations: {
+          select: { locationId: true },
+        },
+      },
     });
+
+    if (memberships.length === 0) {
+      throw new UnauthorizedException(
+        'Invalid refresh token, user has no active organization memberships',
+      );
+    }
 
     const payload = {
       sub: user.id,
       user,
-      memberships: memberships.map((m) => ({
-        id: m.id,
-        userId: m.userId,
-        organizationId: m.organizationId,
-        organizationName: m.organization.name,
-        role: m.role,
-      })),
+      memberships: memberships.map((membership) =>
+        this.serializeJwtMembership(membership),
+      ),
     };
     const accessToken = await this.jwtService.signAsync(payload);
 
@@ -135,6 +164,12 @@ export class AuthService {
   }
 
   async logout(userId: string) {
+    const memberships =
+      (await this.prismaService.membership.findMany({
+        where: { userId, status: MembershipStatus.ACTIVE },
+        select: { organizationId: true },
+      })) ?? [];
+
     await this.prismaService.refreshToken.updateMany({
       where: {
         userId,
@@ -145,5 +180,44 @@ export class AuthService {
         revokedAt: new Date(),
       },
     });
+
+    if (memberships.length > 0) {
+      await this.prismaService.auditLog.createMany({
+        data: memberships.map((membership) => ({
+          organizationId: membership.organizationId,
+          actorUserId: userId,
+          entityType: 'USER',
+          entityId: userId,
+          action: 'LOGOUT',
+        })),
+      });
+    }
+  }
+
+  private serializeJwtMembership(membership: {
+    id: string;
+    userId?: string;
+    organizationId: string;
+    role?: string;
+    organization: { name: string };
+    locations?: Array<{ locationId: string }>;
+  }) {
+    const allowedLocationIds = (membership.locations ?? []).map(
+      (location) => location.locationId,
+    );
+
+    return {
+      id: membership.id,
+      organizationId: membership.organizationId,
+      organizationName: membership.organization.name,
+      ...(membership.userId ? { userId: membership.userId } : {}),
+      ...(membership.role ? { role: membership.role } : {}),
+      ...(membership.locations
+        ? {
+            hasAllLocations: allowedLocationIds.length === 0,
+            allowedLocationIds,
+          }
+        : {}),
+    };
   }
 }

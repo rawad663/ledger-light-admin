@@ -31,10 +31,30 @@ export class OrganizationContextGuard implements CanActivate {
       );
     }
 
-    req.organization = {
+    const organization = {
       organizationId: orgId,
       role: membership.role,
-    };
+    } as RequestWithUser['organization'];
+
+    Object.defineProperties(organization, {
+      membershipId: {
+        value: membership.id ?? '',
+        enumerable: false,
+        writable: true,
+      },
+      hasAllLocations: {
+        value: membership.hasAllLocations ?? true,
+        enumerable: false,
+        writable: true,
+      },
+      allowedLocationIds: {
+        value: membership.allowedLocationIds ?? [],
+        enumerable: false,
+        writable: true,
+      },
+    });
+
+    req.organization = organization;
 
     return true;
   }
