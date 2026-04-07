@@ -62,15 +62,34 @@ export const createPrismaMock = (tx?: Record<string, any>) => {
       delete: jest.fn(),
     },
     auditLog: {
+      create: jest.fn(),
+      createMany: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
     },
     user: {
+      create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
     },
     membership: {
+      count: jest.fn(),
+      create: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      groupBy: jest.fn(),
+    },
+    membershipLocation: {
+      createMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    inviteToken: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
     },
     refreshToken: {
       create: jest.fn(),

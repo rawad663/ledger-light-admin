@@ -9,6 +9,7 @@ import { RequirePermissions } from '@src/common/decorators/permissions.decorator
 import { Permission } from '@src/common/permissions';
 import { ApiDoc } from '@src/common/swagger/api-doc.decorator';
 import { DashboardService } from './dashboard.service';
+import { toOrganizationScopeInput } from '@src/common/organization/location-scope';
 import {
   DashboardSalesOverviewDto,
   DashboardSalesOverviewQueryDto,
@@ -36,7 +37,9 @@ export class DashboardController {
     ok: DashboardSummaryDto,
   })
   getSummary(@CurrentOrganization() organization: CurrentOrg) {
-    return this.dashboardService.getSummary(organization.organizationId);
+    return this.dashboardService.getSummary(
+      toOrganizationScopeInput(organization),
+    );
   }
 
   @Get('sales-overview')
@@ -72,7 +75,7 @@ export class DashboardController {
     @Query() query: DashboardSalesOverviewQueryDto,
   ) {
     return this.dashboardService.getSalesOverview(
-      organization.organizationId,
+      toOrganizationScopeInput(organization),
       query,
     );
   }

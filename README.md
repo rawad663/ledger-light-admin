@@ -18,6 +18,14 @@ make run-seed
 ### Swagger Docs
 Available at `http://localhost:8080/docs`
 
+### Team Permissions & Role Management
+- Team access is membership-based per organization, so the same user can hold different roles in different orgs.
+- `OWNER` has full access, `MANAGER` can invite/manage lower-tier members, and lower-tier roles do not have team-management access.
+- Memberships can be scoped to selected locations; no assigned locations means full organization access.
+- Only `ACTIVE` memberships are included in auth context, while `INVITED` and `DEACTIVATED` remain available for team workflows and audit history.
+
+See [docs/team-role-management.md](docs/team-role-management.md) for the detailed role, permission, tier, invite, and location-scoping rules.
+
 ## 1. Security & Production Readiness Strategy
 
 The backend follows a layered security approach — authentication, authorization, input validation, and infrastructure hardening — designed to work across both development and production environments.

@@ -7,7 +7,10 @@ import { Request } from 'express';
 export type JwtMembership = Pick<
   Membership,
   'id' | 'userId' | 'organizationId' | 'role'
->;
+> & {
+  hasAllLocations: boolean;
+  allowedLocationIds: string[];
+};
 
 export type UserWithMemberships = Omit<User, 'passwordHash'> & {
   memberships: JwtMembership[];
@@ -22,8 +25,11 @@ export type JwtPayload = {
 export interface RequestWithUser extends Request {
   user: UserWithMemberships;
   organization?: {
+    membershipId: string;
     organizationId: string;
     role: Role;
+    hasAllLocations: boolean;
+    allowedLocationIds: string[];
   };
 }
 

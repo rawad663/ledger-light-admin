@@ -30,6 +30,7 @@ import {
   appendToPaginationQuery,
 } from '@src/common/swagger/api-doc.decorator';
 import { GetProductsResponseDto, ProductDto } from './product.dto';
+import { toOrganizationScopeInput } from '@src/common/organization/location-scope';
 
 @Controller('products')
 @OrgProtected()
@@ -85,7 +86,7 @@ export class ProductController {
     @CurrentUser() user: UserWithMemberships,
   ) {
     return this.productService.createProduct(
-      organization.organizationId,
+      toOrganizationScopeInput(organization),
       productData,
       user?.id,
     );

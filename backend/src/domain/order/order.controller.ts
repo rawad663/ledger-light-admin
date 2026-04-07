@@ -39,6 +39,7 @@ import {
   appendToPaginationQuery,
 } from '@src/common/swagger/api-doc.decorator';
 import { OrderStatus } from '@prisma/generated/enums';
+import { toOrganizationScopeInput } from '@src/common/organization/location-scope';
 
 const TRANSITION_PERMISSION: Record<OrderStatus, Permission> = {
   [OrderStatus.CONFIRMED]: Permission.ORDERS_TRANSITION_CONFIRM,
@@ -69,7 +70,7 @@ export class OrderController {
     @CurrentOrganization() org: CurrentOrg,
     @Body() data: CreateOrderDto,
   ) {
-    return this.orderService.createOrder(org.organizationId, data);
+    return this.orderService.createOrder(toOrganizationScopeInput(org), data);
   }
 
   @Post(':id/transition-status')
@@ -95,7 +96,11 @@ export class OrderController {
     if (!hasPermission(org.role, required)) {
       throw new ForbiddenException('Insufficient permissions');
     }
-    return this.orderService.transitionStatus(org.organizationId, id, data);
+    return this.orderService.transitionStatus(
+      toOrganizationScopeInput(org),
+      id,
+      data,
+    );
   }
 
   @Get()
@@ -128,7 +133,7 @@ export class OrderController {
     @CurrentOrganization() org: CurrentOrg,
     @Query() query: GetOrdersQueryDto,
   ) {
-    return this.orderService.getOrders(org.organizationId, query);
+    return this.orderService.getOrders(toOrganizationScopeInput(org), query);
   }
 
   @Get(':id')
@@ -147,7 +152,11 @@ export class OrderController {
     @Param('id') id: string,
     @Query() query: GetOrderQueryDto,
   ) {
-    return this.orderService.getOrderById(org.organizationId, id, query);
+    return this.orderService.getOrderById(
+      toOrganizationScopeInput(org),
+      id,
+      query,
+    );
   }
 
   @Patch(':id')
@@ -164,7 +173,7 @@ export class OrderController {
     @Param('id') id: string,
     @Body() data: UpdateOrderDto,
   ) {
-    return this.orderService.updateOrder(org.organizationId, id, data);
+    return this.orderService.updateOrder(toOrganizationScopeInput(org), id, data);
   }
 
   @Delete(':id')
@@ -175,7 +184,7 @@ export class OrderController {
     params: [{ name: 'id', type: String, in: 'path' }],
   })
   deleteOrder(@CurrentOrganization() org: CurrentOrg, @Param('id') id: string) {
-    return this.orderService.deleteOrder(org.organizationId, id);
+    return this.orderService.deleteOrder(toOrganizationScopeInput(org), id);
   }
 
   /**
@@ -196,7 +205,11 @@ export class OrderController {
     @Param('id') orderId: string,
     @Body() data: CreateOrderItemDto,
   ) {
-    return this.orderService.addOrderItem(org.organizationId, orderId, data);
+    return this.orderService.addOrderItem(
+      toOrganizationScopeInput(org),
+      orderId,
+      data,
+    );
   }
 
   @Delete(':id/items/:itemId')
@@ -221,7 +234,7 @@ export class OrderController {
     @Param('itemId') itemId: string,
   ) {
     return this.orderService.deleteOrderItem(
-      org.organizationId,
+      toOrganizationScopeInput(org),
       orderId,
       itemId,
     );

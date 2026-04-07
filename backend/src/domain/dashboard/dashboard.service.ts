@@ -1,4 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { type CurrentOrg } from '@src/common/decorators/current-org.decorator';
+import {
+  getLocationScopeWhere,
+  hasResolvedLocationScope,
+  resolveOrganizationScope,
+} from '@src/common/organization/location-scope';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
 import { CustomerStatus } from '@prisma/generated/client';
 import { OrderStatus } from '@prisma/generated/enums';
@@ -31,7 +37,8 @@ export class DashboardService {
     private readonly inventoryService: InventoryService,
   ) {}
 
-  async getSummary(organizationId: string): Promise<DashboardSummaryDto> {
+  async getSummary(organization: CurrentOrg | string): Promise<DashboardSummaryDto> {
+    const org = resolveOrganizationScope(organization);
     const todayRange = this.getTodayDateRange();
 
     const [
@@ -42,7 +49,8 @@ export class DashboardService {
     ] = await Promise.all([
       this.prismaService.order.aggregate({
         where: {
-          organizationId,
+          organizationId: org.organizationId,
+          ...getLocationScopeWhere(org),
           status: { in: DASHBOARD_ORDER_STATUSES },
           placedAt: todayRange,
         },
@@ -52,15 +60,18 @@ export class DashboardService {
       }),
       this.prismaService.order.count({
         where: {
-          organizationId,
+          organizationId: org.organizationId,
+          ...getLocationScopeWhere(org),
           status: { in: DASHBOARD_ORDER_STATUSES },
           placedAt: todayRange,
         },
       }),
-      this.inventoryService.getLowStockProductCount(organizationId),
+      this.inventoryService.getLowStockProductCount(
+        hasResolvedLocationScope(organization) ? org : org.organizationId,
+      ),
       this.prismaService.customer.count({
         where: {
-          organizationId,
+          organizationId: org.organizationId,
           status: CustomerStatus.ACTIVE,
         },
       }),
@@ -75,9 +86,10 @@ export class DashboardService {
   }
 
   async getSalesOverview(
-    organizationId: string,
+    organization: CurrentOrg | string,
     query: DashboardSalesOverviewQueryDto,
   ): Promise<DashboardSalesOverviewDto> {
+    const org = resolveOrganizationScope(organization);
     const timeline = query.timeline ?? DashboardSalesTimeline.WEEK;
     const anchor = query.anchor ? new Date(query.anchor) : new Date();
     const period = this.resolveSalesPeriod(timeline, anchor);
@@ -85,7 +97,8 @@ export class DashboardService {
 
     const orders = await this.prismaService.order.findMany({
       where: {
-        organizationId,
+        organizationId: org.organizationId,
+        ...getLocationScopeWhere(org),
         status: { in: DASHBOARD_ORDER_STATUSES },
         placedAt: {
           gte: period.periodStart,

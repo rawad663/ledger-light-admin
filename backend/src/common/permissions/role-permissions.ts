@@ -43,6 +43,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     Permission.LOCATIONS_ARCHIVE,
     // Users & audit
     Permission.USERS_READ,
+    Permission.USERS_INVITE,
     Permission.AUDIT_LOGS_READ,
     Permission.REPORTS_READ,
   ],

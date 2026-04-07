@@ -25,6 +25,12 @@ enum Role {
   INVENTORY_CLERK
 }
 
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  DEACTIVATED
+}
+
 enum CustomerStatus {
   ACTIVE
   INACTIVE
@@ -47,10 +53,18 @@ enum AuditAction {
   INVENTORY_ADJUST
   LOGIN
   LOGOUT
+  INVITE_SENT
+  INVITE_RESENT
+  INVITE_ACCEPTED
+  ROLE_CHANGED
+  MEMBER_DEACTIVATED
+  MEMBER_REACTIVATED
+  LOCATION_SCOPE_CHANGED
 }
 
 enum AuditEntityType {
   USER
+  MEMBERSHIP
   CUSTOMER
   PRODUCT
   LOCATION
@@ -109,15 +123,50 @@ model Membership {
   organizationId String
   userId         String
   role           Role
+  status         MembershipStatus @default(ACTIVE)
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locations      MembershipLocation[]
+  inviteTokens   InviteToken[]
 
   createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  invitedAt      DateTime?
+  activatedAt    DateTime?
+  deactivatedAt  DateTime?
 
   @@unique([organizationId, userId])
   @@index([userId])
   @@index([organizationId, role])
+  @@index([organizationId, status])
+}
+
+model MembershipLocation {
+  id           String      @id @default(uuid())
+  membershipId String
+  locationId   String
+
+  membership   Membership  @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  location     Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime    @default(now())
+
+  @@unique([membershipId, locationId])
+  @@index([locationId])
+}
+
+model InviteToken {
+  id           String      @id @default(uuid())
+  membershipId String
+  tokenHash    String      @unique @db.VarChar(255)
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  createdAt    DateTime    @default(now())
+
+  membership   Membership  @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId, expiresAt])
 }
 
 //
@@ -126,7 +175,7 @@ model Membership {
 model User {
   id           String        @id @default(uuid())
   email        String        @unique @db.VarChar(320)
-  passwordHash String        @db.VarChar(255)
+  passwordHash String?       @db.VarChar(255)
 
   // Optional profile fields for admin UI
   firstName    String?       @db.VarChar(100)
@@ -234,6 +283,7 @@ model Location {
   inventoryLevels InventoryLevel[]
   adjustments    InventoryAdjustment[]
   orders         Order[]
+  membershipLocations MembershipLocation[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, code])

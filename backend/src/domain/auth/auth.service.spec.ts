@@ -46,10 +46,10 @@ describe('AuthService', () => {
       (prisma.user.update as jest.Mock).mockResolvedValue({
         ...baseUser,
         passwordHash: undefined,
+        memberships: [
+          { id: 'm1', organizationId: '111', organization: { name: 'lala' } },
+        ] as any,
       });
-      (prisma.membership.findMany as jest.Mock).mockResolvedValue([
-        { id: 'm1', organizationId: '111', organization: { name: 'lala' } },
-      ] as any);
       jwt.signAsync.mockResolvedValue('access-token');
 
       const res = await service.login({ email: 'a@b.com', password: 'pw' });
@@ -63,6 +63,19 @@ describe('AuthService', () => {
         where: { id: 'u1' },
         data: expect.any(Object),
         omit: { passwordHash: true },
+        include: {
+          memberships: {
+            where: { status: 'ACTIVE' },
+            include: {
+              organization: true,
+              locations: {
+                select: {
+                  locationId: true,
+                },
+              },
+            },
+          },
+        },
       });
       expect(jwt.signAsync).toHaveBeenCalledWith({
         sub: 'u1',

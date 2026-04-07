@@ -1,10 +1,16 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/generated/client';
+import { type CurrentOrg } from '@src/common/decorators/current-org.decorator';
+import {
+  getLocationScopeWhere,
+  resolveOrganizationScope,
+} from '@src/common/organization/location-scope';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
 import {
   CreateLocationDto,
@@ -19,13 +25,15 @@ export class LocationService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async getLocations(
-    organizationId: string,
+    organization: CurrentOrg | string,
     query: GetLocationsQueryDto,
   ): Promise<GetLocationsResponseDto> {
+    const org = resolveOrganizationScope(organization);
     const { search, status, type, ...paginationQuery } = query;
 
     const where: Prisma.LocationWhereInput = {
-      organizationId,
+      organizationId: org.organizationId,
+      ...getLocationScopeWhere(org),
       ...(status ? { status } : { status: { not: LocationStatus.ARCHIVED } }),
       ...(type ? { type } : {}),
     };
@@ -83,9 +91,14 @@ export class LocationService {
     };
   }
 
-  async getLocationById(organizationId: string, locationId: string) {
+  async getLocationById(organization: CurrentOrg | string, locationId: string) {
+    const org = resolveOrganizationScope(organization);
     const location = await this.prismaService.location.findFirst({
-      where: { id: locationId, organizationId },
+      where: {
+        id: locationId,
+        organizationId: org.organizationId,
+        ...getLocationScopeWhere(org),
+      },
     });
 
     if (!location) {
@@ -96,24 +109,36 @@ export class LocationService {
   }
 
   async createLocation(
-    organizationId: string,
+    organization: CurrentOrg | string,
     locationData: CreateLocationDto,
   ) {
+    const org = resolveOrganizationScope(organization);
+    if (!org.hasAllLocations) {
+      throw new ForbiddenException(
+        'Only memberships with all-location access can create locations',
+      );
+    }
+
     return this.prismaService.location.create({
       data: {
         ...locationData,
-        organizationId,
+        organizationId: org.organizationId,
       },
     });
   }
 
   async updateLocation(
-    organizationId: string,
+    organization: CurrentOrg | string,
     locationId: string,
     locationData: UpdateLocationDto,
   ) {
+    const org = resolveOrganizationScope(organization);
     const existing = await this.prismaService.location.findFirst({
-      where: { id: locationId, organizationId },
+      where: {
+        id: locationId,
+        organizationId: org.organizationId,
+        ...getLocationScopeWhere(org),
+      },
     });
 
     if (!existing) {
@@ -128,14 +153,19 @@ export class LocationService {
     }
 
     return this.prismaService.location.update({
-      where: { id: locationId, organizationId },
+      where: { id: locationId, organizationId: org.organizationId },
       data: locationData,
     });
   }
 
-  async deleteLocation(organizationId: string, locationId: string) {
+  async deleteLocation(organization: CurrentOrg | string, locationId: string) {
+    const org = resolveOrganizationScope(organization);
     const existing = await this.prismaService.location.findFirst({
-      where: { id: locationId, organizationId },
+      where: {
+        id: locationId,
+        organizationId: org.organizationId,
+        ...getLocationScopeWhere(org),
+      },
     });
 
     if (!existing) {
@@ -143,7 +173,10 @@ export class LocationService {
     }
 
     const locationCount = await this.prismaService.location.count({
-      where: { organizationId },
+      where: {
+        organizationId: org.organizationId,
+        ...getLocationScopeWhere(org),
+      },
     });
 
     if (locationCount <= 1) {
@@ -157,10 +190,10 @@ export class LocationService {
       errorType: 'conflict',
     });
 
-    await this.assertNoLocationHistory(organizationId, locationId);
+    await this.assertNoLocationHistory(org.organizationId, locationId);
 
     return this.prismaService.location.delete({
-      where: { id: locationId, organizationId },
+      where: { id: locationId, organizationId: org.organizationId },
     });
   }
 

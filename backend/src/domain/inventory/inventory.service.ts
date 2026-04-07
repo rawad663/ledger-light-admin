@@ -3,6 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { type CurrentOrg } from '@src/common/decorators/current-org.decorator';
+import {
+  ensureLocationAccessible,
+  getLocationScopeWhere,
+  hasRestrictedLocations,
+  resolveOrganizationScope,
+} from '@src/common/organization/location-scope';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
 import {
   CreateAdjustmentBodyDto,
@@ -35,10 +42,11 @@ export class InventoryService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async getInventory(
-    organizationId: string,
+    organization: CurrentOrg | string,
     query: GetInventoryQueryDto,
   ): Promise<GetAggregatedInventoryResponseDto> {
-    const rows = await this.getAggregatedInventorySnapshot(organizationId);
+    const org = resolveOrganizationScope(organization);
+    const rows = await this.getAggregatedInventorySnapshot(org);
     const filteredRows = query.lowStockOnly
       ? rows.filter((row) => row.isLowStock)
       : rows;
@@ -60,30 +68,49 @@ export class InventoryService {
     };
   }
 
-  async getLowStockProductCount(organizationId: string): Promise<number> {
-    const result = await this.prismaService.$queryRaw<[{ count: bigint }]>`
-      SELECT COUNT(*)::int AS count
-      FROM (
-        SELECT il."productId"
-        FROM "InventoryLevel" il
-        JOIN "Product" p ON p.id = il."productId"
-        WHERE p."organizationId" = ${organizationId}
-        GROUP BY il."productId", p."reorderThreshold"
-        HAVING SUM(il.quantity) <= p."reorderThreshold"
-      ) sub
-    `;
-    return Number(result[0].count);
+  async getLowStockProductCount(organization: CurrentOrg | string): Promise<number> {
+    const org = resolveOrganizationScope(organization);
+
+    if (!hasRestrictedLocations(org)) {
+      const rows = (await this.prismaService.$queryRaw<
+        Array<{ count: bigint | number | string }>
+      >`
+        SELECT COUNT(*)::bigint AS count
+        FROM (
+          SELECT p.id
+          FROM "Product" p
+          LEFT JOIN "InventoryLevel" il ON il."productId" = p.id
+          WHERE p."organizationId" = ${org.organizationId}
+          GROUP BY p.id, p."reorderThreshold"
+          HAVING COALESCE(SUM(il.quantity), 0) <= p."reorderThreshold"
+        ) low_stock_products
+      `) ?? [{ count: 0n }];
+
+      const rawCount = rows[0]?.count ?? 0;
+      return Number(rawCount);
+    }
+
+    const rows = await this.getAggregatedInventorySnapshot(org);
+    return rows.filter((row) => row.isLowStock).length;
   }
 
   async getLevels(
-    organizationId: string,
+    organization: CurrentOrg | string,
     query: GetLevelsQueryDto,
   ): Promise<GetInventoryLevelsResponseDto> {
+    const org = resolveOrganizationScope(organization);
     const { locationId, search, lowStockOnly, productId, ...paginationQuery } =
       query;
 
+    if (locationId) {
+      ensureLocationAccessible(org, locationId, {
+        forbiddenMessage: 'You do not have access to this location',
+      });
+    }
+
     const where: Prisma.InventoryLevelWhereInput = {
-      product: { organizationId, id: productId },
+      product: { organizationId: org.organizationId, id: productId },
+      ...getLocationScopeWhere(org),
     };
 
     if (locationId) {
@@ -149,8 +176,13 @@ export class InventoryService {
               total,
               nextCursor,
             })),
-      this.prismaService.location.findMany({ where: { organizationId } }),
-      this.getLowStockProductCount(organizationId),
+      this.prismaService.location.findMany({
+        where: {
+          organizationId: org.organizationId,
+          ...getLocationScopeWhere(org),
+        },
+      }),
+      this.getLowStockProductCount(org),
     ]);
 
     const data = levelsResult.data.map((level) => ({
@@ -172,12 +204,16 @@ export class InventoryService {
   }
 
   async getAggregatedInventorySnapshot(
-    organizationId: string,
+    organization: CurrentOrg | string,
   ): Promise<AggregatedInventoryRow[]> {
-    const products = (await this.prismaService.product.findMany({
-      where: { organizationId },
+    const org = resolveOrganizationScope(organization);
+    const products = ((await this.prismaService.product.findMany({
+      where: { organizationId: org.organizationId },
       include: {
         inventoryLevels: {
+          ...(hasRestrictedLocations(org)
+            ? { where: getLocationScopeWhere(org) }
+            : {}),
           include: {
             location: {
               select: {
@@ -188,7 +224,7 @@ export class InventoryService {
           },
         },
       },
-    })) as ProductWithInventory[];
+    })) ?? []) as ProductWithInventory[];
 
     return products.map((product) => {
       const totalQuantity = product.inventoryLevels.reduce(
@@ -318,9 +354,16 @@ export class InventoryService {
   async createAdjustment(
     data: CreateAdjustmentBodyDto & {
       organizationId: string;
+      organization?: CurrentOrg;
       actorUserId?: string;
     },
   ) {
+    if (data.organization) {
+      ensureLocationAccessible(data.organization, data.locationId, {
+        allowUnspecified: false,
+      });
+    }
+
     return this.prismaService.$transaction((tx) =>
       this.createAdjustmentWithTx(tx, data),
     );
@@ -330,9 +373,16 @@ export class InventoryService {
     tx: Prisma.TransactionClient,
     data: CreateAdjustmentBodyDto & {
       organizationId: string;
+      organization?: CurrentOrg;
       actorUserId?: string;
     },
   ) {
+    if (data.organization) {
+      ensureLocationAccessible(data.organization, data.locationId, {
+        allowUnspecified: false,
+      });
+    }
+
     const inventoryLevel = await tx.inventoryLevel.upsert({
       where: {
         productId_locationId: {
@@ -362,7 +412,15 @@ export class InventoryService {
     });
 
     const adjustment = await tx.inventoryAdjustment.create({
-      data,
+      data: {
+        organizationId: data.organizationId,
+        productId: data.productId,
+        locationId: data.locationId,
+        actorUserId: data.actorUserId,
+        delta: data.delta,
+        reason: data.reason,
+        note: data.note,
+      },
     });
 
     return {
@@ -371,13 +429,22 @@ export class InventoryService {
     };
   }
 
-  async createLevel(organizationId: string, data: CreateInventoryLevelDto) {
+  async createLevel(organization: CurrentOrg | string, data: CreateInventoryLevelDto) {
+    const org = resolveOrganizationScope(organization);
+    ensureLocationAccessible(org, data.locationId, {
+      allowUnspecified: false,
+    });
+
     const [product, location] = await Promise.all([
       this.prismaService.product.findFirst({
-        where: { id: data.productId, organizationId },
+        where: { id: data.productId, organizationId: org.organizationId },
       }),
       this.prismaService.location.findFirst({
-        where: { id: data.locationId, organizationId },
+        where: {
+          id: data.locationId,
+          organizationId: org.organizationId,
+          ...getLocationScopeWhere(org),
+        },
       }),
     ]);
 
@@ -394,19 +461,39 @@ export class InventoryService {
   }
 
   async updateLevel(
-    organizationId: string,
+    organization: CurrentOrg | string,
     id: string,
     data: UpdateInventoryLevelDto,
   ) {
+    const org = resolveOrganizationScope(organization);
     return this.prismaService.inventoryLevel.update({
-      where: { id, product: { organizationId }, location: { organizationId } },
+      where: {
+        id,
+        product: { organizationId: org.organizationId },
+        location: {
+          organizationId: org.organizationId,
+          ...(hasRestrictedLocations(org)
+            ? { id: { in: org.allowedLocationIds } }
+            : {}),
+        },
+      },
       data,
     });
   }
 
-  async deleteLevel(organizationId: string, id: string) {
+  async deleteLevel(organization: CurrentOrg | string, id: string) {
+    const org = resolveOrganizationScope(organization);
     return this.prismaService.inventoryLevel.delete({
-      where: { id, product: { organizationId }, location: { organizationId } },
+      where: {
+        id,
+        product: { organizationId: org.organizationId },
+        location: {
+          organizationId: org.organizationId,
+          ...(hasRestrictedLocations(org)
+            ? { id: { in: org.allowedLocationIds } }
+            : {}),
+        },
+      },
     });
   }
 }

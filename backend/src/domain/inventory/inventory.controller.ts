@@ -22,6 +22,10 @@ import {
   ApiDoc,
   appendToPaginationQuery,
 } from '@src/common/swagger/api-doc.decorator';
+import {
+  hasResolvedLocationScope,
+  toOrganizationScopeInput,
+} from '@src/common/organization/location-scope';
 
 @Controller('inventory')
 @OrgProtected()
@@ -48,7 +52,10 @@ export class InventoryController {
     @CurrentOrganization() org: CurrentOrg,
     @Query() query: GetInventoryQueryDto,
   ) {
-    return this.inventoryService.getInventory(org.organizationId, query);
+    return this.inventoryService.getInventory(
+      toOrganizationScopeInput(org),
+      query,
+    );
   }
 
   @Get('levels')
@@ -81,7 +88,7 @@ export class InventoryController {
     @CurrentOrganization() org: CurrentOrg,
     @Query() query: GetLevelsQueryDto,
   ) {
-    return this.inventoryService.getLevels(org.organizationId, query);
+    return this.inventoryService.getLevels(toOrganizationScopeInput(org), query);
   }
 
   @Post('/adjustments')
@@ -101,6 +108,7 @@ export class InventoryController {
   ) {
     return this.inventoryService.createAdjustment({
       organizationId: org.organizationId,
+      ...(hasResolvedLocationScope(org) ? { organization: org } : {}),
       actorUserId: user.id,
       ...adjustmentData,
     });
