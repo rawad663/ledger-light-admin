@@ -3,6 +3,8 @@ import type { components } from "@/lib/api-types";
 export type OrderStatus = components["schemas"]["OrderDto"]["status"];
 export type CustomerStatus = "ACTIVE" | "INACTIVE" | "BLOCKED";
 export type InventoryStockStatus = "OK" | "Warning" | "Reorder";
+export type TeamMembershipStatus =
+  components["schemas"]["TeamMemberListItemDto"]["status"];
 
 export const ORDER_STATUS_STYLES: Record<OrderStatus, string> = {
   PENDING: "bg-warning/15 text-warning-foreground border-warning/30",
@@ -30,6 +32,15 @@ export const INVENTORY_STATUS_STYLES: Record<InventoryStockStatus, string> = {
   OK: "bg-success/15 text-success border-success/30",
   Warning: "bg-warning/15 text-warning-foreground border-warning/30",
   Reorder: "bg-destructive/15 text-destructive border-destructive/30",
+};
+
+export const TEAM_MEMBERSHIP_STATUS_STYLES: Record<
+  TeamMembershipStatus,
+  string
+> = {
+  ACTIVE: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  INVITED: "bg-amber-100 text-amber-700 border-amber-200",
+  DEACTIVATED: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 export function getInventoryStockStatus(
