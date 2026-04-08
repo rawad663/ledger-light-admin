@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/generated/client';
 import { type CurrentOrg } from '@src/common/decorators/current-org.decorator';
 import {
   getLocationScopeWhere,
+  hasRestrictedLocations,
   resolveOrganizationScope,
 } from '@src/common/organization/location-scope';
 import { PrismaService } from '@src/infra/prisma/prisma.service';
@@ -33,7 +34,7 @@ export class LocationService {
 
     const where: Prisma.LocationWhereInput = {
       organizationId: org.organizationId,
-      ...getLocationScopeWhere(org),
+      ...getLocationScopeWhere(org, 'id'),
       ...(status ? { status } : { status: { not: LocationStatus.ARCHIVED } }),
       ...(type ? { type } : {}),
     };
@@ -95,9 +96,12 @@ export class LocationService {
     const org = resolveOrganizationScope(organization);
     const location = await this.prismaService.location.findFirst({
       where: {
-        id: locationId,
         organizationId: org.organizationId,
-        ...getLocationScopeWhere(org),
+        ...(hasRestrictedLocations(org)
+          ? {
+              AND: [{ id: locationId }, getLocationScopeWhere(org, 'id')],
+            }
+          : { id: locationId }),
       },
     });
 
@@ -135,9 +139,12 @@ export class LocationService {
     const org = resolveOrganizationScope(organization);
     const existing = await this.prismaService.location.findFirst({
       where: {
-        id: locationId,
         organizationId: org.organizationId,
-        ...getLocationScopeWhere(org),
+        ...(hasRestrictedLocations(org)
+          ? {
+              AND: [{ id: locationId }, getLocationScopeWhere(org, 'id')],
+            }
+          : { id: locationId }),
       },
     });
 
@@ -162,9 +169,12 @@ export class LocationService {
     const org = resolveOrganizationScope(organization);
     const existing = await this.prismaService.location.findFirst({
       where: {
-        id: locationId,
         organizationId: org.organizationId,
-        ...getLocationScopeWhere(org),
+        ...(hasRestrictedLocations(org)
+          ? {
+              AND: [{ id: locationId }, getLocationScopeWhere(org, 'id')],
+            }
+          : { id: locationId }),
       },
     });
 
@@ -175,7 +185,7 @@ export class LocationService {
     const locationCount = await this.prismaService.location.count({
       where: {
         organizationId: org.organizationId,
-        ...getLocationScopeWhere(org),
+        ...getLocationScopeWhere(org, 'id'),
       },
     });
 

@@ -58,9 +58,12 @@ export class OrderService {
       if (locationId) {
         const ok = await tx.location.findFirst({
           where: {
-            id: locationId,
             organizationId: org.organizationId,
-            ...getLocationScopeWhere(org),
+            ...(hasRestrictedLocations(org)
+              ? {
+                  AND: [{ id: locationId }, getLocationScopeWhere(org, 'id')],
+                }
+              : { id: locationId }),
           },
           select: { id: true },
         });
@@ -334,7 +337,7 @@ export class OrderService {
       this.prismaService.location.findMany({
         where: {
           organizationId: org.organizationId,
-          ...getLocationScopeWhere(org),
+          ...getLocationScopeWhere(org, 'id'),
         },
         orderBy: { name: 'asc' },
         select: {
@@ -447,9 +450,15 @@ export class OrderService {
 
       const ok = await this.prismaService.location.findFirst({
         where: {
-          id: data.locationId,
           organizationId: org.organizationId,
-          ...getLocationScopeWhere(org),
+          ...(hasRestrictedLocations(org)
+            ? {
+                AND: [
+                  { id: data.locationId },
+                  getLocationScopeWhere(org, 'id'),
+                ],
+              }
+            : { id: data.locationId }),
         },
         select: { id: true },
       });

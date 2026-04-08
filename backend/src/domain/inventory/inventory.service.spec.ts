@@ -8,6 +8,13 @@ import { productsWithInventory } from '@src/test-utils/fixtures';
 describe('InventoryService', () => {
   let service: InventoryService;
   let prisma: jest.Mocked<PrismaService>;
+  const scopedOrg = {
+    membershipId: 'mem-1',
+    organizationId: 'org-1',
+    role: 'MANAGER',
+    hasAllLocations: false,
+    allowedLocationIds: ['loc-1', 'loc-2'],
+  } as any;
 
   beforeEach(async () => {
     prisma = createPrismaMock();
@@ -256,6 +263,35 @@ describe('InventoryService', () => {
       });
     });
 
+    it('uses id scope for the location list while keeping level filters on locationId for restricted memberships', async () => {
+      (prisma.paginateMany as jest.Mock).mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ count: 0n }]);
+
+      await service.getLevels(scopedOrg, { limit: 20 } as any);
+
+      expect(prisma.paginateMany).toHaveBeenCalledWith(
+        prisma.inventoryLevel,
+        expect.objectContaining({
+          where: {
+            product: { organizationId: 'org-1', id: undefined },
+            locationId: { in: ['loc-1', 'loc-2'] },
+          },
+          include: { product: true, location: true },
+        }),
+        expect.anything(),
+      );
+      expect((prisma as any).location.findMany).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'org-1',
+          id: { in: ['loc-1', 'loc-2'] },
+        },
+      });
+    });
+
     it('applies search filter on product name and SKU', async () => {
       (prisma.paginateMany as jest.Mock).mockResolvedValue({
         data: [],
@@ -474,6 +510,30 @@ describe('InventoryService', () => {
         data: { productId: 'prod-1', locationId: 'loc-1', quantity: 0 },
       });
       expect(res).toBe(created);
+    });
+
+    it('uses id scope when validating locations for restricted memberships', async () => {
+      (prisma as any).product.findFirst.mockResolvedValue({ id: 'prod-1' });
+      (prisma as any).location.findFirst.mockResolvedValue({ id: 'loc-1' });
+      (prisma as any).inventoryLevel.create.mockResolvedValue({
+        id: 'lvl-1',
+        productId: 'prod-1',
+        locationId: 'loc-1',
+        quantity: 0,
+      });
+
+      await service.createLevel(scopedOrg, {
+        productId: 'prod-1',
+        locationId: 'loc-1',
+        quantity: 0,
+      });
+
+      expect((prisma as any).location.findFirst).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'org-1',
+          AND: [{ id: 'loc-1' }, { id: { in: ['loc-1', 'loc-2'] } }],
+        },
+      });
     });
   });
 

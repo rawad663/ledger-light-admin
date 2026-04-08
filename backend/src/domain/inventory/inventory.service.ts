@@ -181,7 +181,7 @@ export class InventoryService {
       this.prismaService.location.findMany({
         where: {
           organizationId: org.organizationId,
-          ...getLocationScopeWhere(org),
+          ...getLocationScopeWhere(org, 'id'),
         },
       }),
       this.getLowStockProductCount(org),
@@ -446,9 +446,15 @@ export class InventoryService {
       }),
       this.prismaService.location.findFirst({
         where: {
-          id: data.locationId,
           organizationId: org.organizationId,
-          ...getLocationScopeWhere(org),
+          ...(hasRestrictedLocations(org)
+            ? {
+                AND: [
+                  { id: data.locationId },
+                  getLocationScopeWhere(org, 'id'),
+                ],
+              }
+            : { id: data.locationId }),
         },
       }),
     ]);

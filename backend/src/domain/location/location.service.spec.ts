@@ -11,6 +11,13 @@ import { LocationService } from './location.service';
 describe('LocationService', () => {
   let service: LocationService;
   let prisma: jest.Mocked<PrismaService>;
+  const scopedOrg = {
+    membershipId: 'mem-1',
+    organizationId: 'org-1',
+    role: 'MANAGER',
+    hasAllLocations: false,
+    allowedLocationIds: ['loc-1', 'loc-2'],
+  } as any;
 
   beforeEach(async () => {
     prisma = createPrismaMock();
@@ -99,6 +106,28 @@ describe('LocationService', () => {
         expect.anything(),
       );
     });
+
+    it('uses id scope for restricted memberships', async () => {
+      prisma.paginateMany.mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
+
+      await service.getLocations(scopedOrg, { limit: 20 } as any);
+
+      expect(prisma.paginateMany).toHaveBeenCalledWith(
+        prisma.location,
+        expect.objectContaining({
+          where: {
+            organizationId: 'org-1',
+            id: { in: ['loc-1', 'loc-2'] },
+            status: { not: 'ARCHIVED' },
+          },
+        }),
+        expect.anything(),
+      );
+    });
   });
 
   describe('getLocationById', () => {
@@ -118,6 +147,21 @@ describe('LocationService', () => {
       await expect(
         service.getLocationById('org-1', 'loc-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('uses id scope for restricted memberships', async () => {
+      (prisma.location.findFirst as jest.Mock).mockResolvedValue({
+        id: 'loc-1',
+      });
+
+      await service.getLocationById(scopedOrg, 'loc-1');
+
+      expect(prisma.location.findFirst).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'org-1',
+          AND: [{ id: 'loc-1' }, { id: { in: ['loc-1', 'loc-2'] } }],
+        },
+      });
     });
   });
 
@@ -215,6 +259,26 @@ describe('LocationService', () => {
       await expect(
         service.deleteLocation('org-1', 'loc-1'),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('uses id scope for restricted memberships', async () => {
+      (prisma.location.findFirst as jest.Mock).mockResolvedValue({
+        id: 'loc-1',
+      });
+      (prisma.location.count as jest.Mock).mockResolvedValue(2);
+      (prisma.inventoryLevel.count as jest.Mock).mockResolvedValue(0);
+      (prisma.inventoryAdjustment.count as jest.Mock).mockResolvedValue(0);
+      (prisma.order.count as jest.Mock).mockResolvedValue(0);
+      (prisma.location.delete as jest.Mock).mockResolvedValue({ id: 'loc-1' });
+
+      await service.deleteLocation(scopedOrg, 'loc-1');
+
+      expect(prisma.location.count).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'org-1',
+          id: { in: ['loc-1', 'loc-2'] },
+        },
+      });
     });
   });
 });

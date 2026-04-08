@@ -25,6 +25,13 @@ describe('OrderService', () => {
 
   const orgId = 'org-1';
   const orderId = 'ord-1';
+  const scopedOrg = {
+    membershipId: 'mem-1',
+    organizationId: orgId,
+    role: 'MANAGER',
+    hasAllLocations: false,
+    allowedLocationIds: ['loc-1', 'loc-2'],
+  } as any;
   const product = {
     id: 'p1',
     name: 'Widget',
@@ -536,6 +543,46 @@ describe('OrderService', () => {
         },
       });
     });
+
+    it('uses id scope for the location list while keeping order filters on locationId for restricted memberships', async () => {
+      (prisma.paginateMany as jest.Mock).mockResolvedValue({
+        data: [],
+        total: 0,
+        nextCursor: undefined,
+      });
+
+      await service.getOrders(scopedOrg, {
+        withItems: false,
+        limit: 20,
+      } as any);
+
+      expect(prisma.paginateMany).toHaveBeenCalledWith(
+        prisma.order,
+        expect.objectContaining({
+          where: {
+            organizationId: orgId,
+            locationId: { in: ['loc-1', 'loc-2'] },
+          },
+        }),
+        expect.anything(),
+      );
+      expect(prisma.location.findMany).toHaveBeenCalledWith({
+        where: {
+          organizationId: orgId,
+          id: { in: ['loc-1', 'loc-2'] },
+        },
+        orderBy: { name: 'asc' },
+        select: {
+          addressLine1: true,
+          city: true,
+          countryCode: true,
+          id: true,
+          name: true,
+          postalCode: true,
+          stateProvince: true,
+        },
+      });
+    });
   });
 
   // ── getOrderById ─────────────────────────────────────────────────────
@@ -680,6 +727,30 @@ describe('OrderService', () => {
 
       expect(prisma.customer.findFirst).toHaveBeenCalledWith({
         where: { id: 'cust-1', organizationId: orgId },
+        select: { id: true },
+      });
+    });
+
+    it('uses id scope when validating locations for restricted memberships', async () => {
+      (prisma.location.findFirst as jest.Mock).mockResolvedValue({
+        id: 'loc-1',
+      });
+      (prisma.order.findFirst as jest.Mock).mockResolvedValue({
+        id: orderId,
+        organizationId: orgId,
+        locationId: 'loc-1',
+      });
+      (prisma.order.update as jest.Mock).mockResolvedValue({ id: orderId });
+
+      await service.updateOrder(scopedOrg, orderId, {
+        locationId: 'loc-1',
+      } as any);
+
+      expect(prisma.location.findFirst).toHaveBeenCalledWith({
+        where: {
+          organizationId: orgId,
+          AND: [{ id: 'loc-1' }, { id: { in: ['loc-1', 'loc-2'] } }],
+        },
         select: { id: true },
       });
     });
