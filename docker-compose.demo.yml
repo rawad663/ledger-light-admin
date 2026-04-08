@@ -1,0 +1,34 @@
+services:
+  db_demo:
+    image: postgres:16-alpine
+    container_name: ledgerlight_db_demo
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ledgerlight_demo
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_demo_data:/var/lib/postgresql/data
+    shm_size: '512mb'
+    # Performance flags for bulk seed operations.
+    # synchronous_commit=off trades fsync durability for ~3x write throughput.
+    # Safe for demo/perf data — not for production.
+    command: >
+      postgres
+        -c shared_buffers=256MB
+        -c work_mem=64MB
+        -c maintenance_work_mem=256MB
+        -c synchronous_commit=off
+        -c wal_buffers=16MB
+        -c max_wal_size=2GB
+        -c checkpoint_completion_target=0.9
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ledgerlight_demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_demo_data:
