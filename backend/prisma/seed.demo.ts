@@ -1,20 +1,21 @@
 /**
- * Demo / Performance Seed
+ * QA / Performance Seed
  *
  * Populates an isolated PostgreSQL database with production-grade, realistic SMB
- * data for demo and performance-testing purposes.
+ * data for QA, demos, and performance-testing purposes.
  *
  * Target volumes:
  *   ~120 organizations  |  ~1,500 users  |  ~600 locations  |  ~55,000 products
  *   ~60,000 customers   |  ~55,000 inventory levels          |  ~1.2M orders
  *
  * Run with:
- *   make demo-seed
+ *   make qa-seed
  * or directly:
  *   cd backend && DATABASE_URL="postgres://..." npx tsx prisma/seed.demo.ts
  *
  * The script is idempotent: it exits early if ≥100 orgs are already present.
- * Use `make demo-reset` to wipe and reseed from scratch.
+ * To reseed from scratch, remove the QA volume and rerun `make qa-migrate`
+ * plus `make qa-seed`.
  */
 
 import { randomUUID } from 'crypto';
@@ -1194,14 +1195,14 @@ async function main(): Promise<void> {
   // Idempotency guard
   const existingOrgs = await prisma.organization.count();
   if (existingOrgs >= 100) {
+    log(`QA DB already contains ${existingOrgs} organizations. Skipping seed.`);
     log(
-      `Demo DB already contains ${existingOrgs} organizations. Skipping seed.`,
+      'Delete the QA database volume, then rerun `make qa-migrate` and `make qa-seed` to reseed from scratch.',
     );
-    log('Run `make demo-reset` to wipe and reseed from scratch.');
     return;
   }
 
-  log('Starting demo seed...');
+  log('Starting QA seed...');
 
   // Hash shared password once — reused for all demo users
   log('Hashing shared password...');

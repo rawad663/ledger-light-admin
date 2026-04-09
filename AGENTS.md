@@ -11,9 +11,17 @@ Ledger Light Admin is a multi-tenant SaaS admin panel built as a monorepo:
 ## Quick Start
 
 ```bash
-make dev-build              # Start dev environment (Docker)
-make run-migrations         # Run Prisma migrations
-make run-seed               # Seed the database
+cp .env.dev.example .env.dev
+cp .env.qa.example .env.qa
+cp .env.prod.example .env.prod
+
+make dev-build              # Start the dev environment (Docker)
+make dev-migrate            # Run Prisma migrations in dev
+make dev-seed               # Seed the dev database
+
+make qa-build               # Start the QA environment in production mode
+make qa-migrate             # Run deploy-style migrations in QA
+make qa-seed                # Seed the QA/demo database
 
 # Backend
 cd backend && npm test       # Run tests (watch)
@@ -24,7 +32,9 @@ cd backend && npm run test:cov  # Coverage report
 cd frontend && npm run test:run
 ```
 
-Swagger docs: `http://localhost:8080/docs`
+Swagger docs: `http://localhost:8080/docs` for dev and `http://localhost:8081/docs` for QA
+
+The frontend reads `NEXT_PUBLIC_API_URL` from the root `.env.dev`, `.env.qa`, and `.env.prod` files. `frontend/.env.local` and `frontend/.env.production` are retired.
 
 ## Must-Do On Every Run
 
