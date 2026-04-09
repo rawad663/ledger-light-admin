@@ -1,5 +1,13 @@
+import { loadRootEnvironment } from "./lib/root-env.mjs";
+
+const { environment } = loadRootEnvironment();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    LEDGERLIGHT_ENV: environment,
+  },
   async rewrites() {
     return [
       {
@@ -14,6 +22,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

@@ -9,14 +9,22 @@ Monorepo structure:
 
 ### Getting Started
 ```bash
-cp .env.example .env
-docker compose up --build
-make run-migrations
-make run-seed
+cp .env.dev.example .env.dev
+cp .env.qa.example .env.qa
+cp .env.prod.example .env.prod
+
+make dev-build
+make dev-migrate
+make dev-seed
 ```
 
 ### Swagger Docs
-Available at `http://localhost:8080/docs`
+Available at `http://localhost:8080/docs` for dev and `http://localhost:8081/docs` for QA.
+
+### Environment Guide
+See [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) for the full dev / QA / prod Docker workflow, environment files, ports, and migration / seed commands.
+
+The frontend now reads `NEXT_PUBLIC_API_URL` from the same root environment files as the backend. `frontend/.env.local` and `frontend/.env.production` are no longer used. Local development prefers `.env.dev`, `.env.qa`, and `.env.prod`, while CI/build-only environments can safely fall back to the committed `*.example` files.
 
 ### Team Permissions & Role Management
 - Team access is membership-based per organization, so the same user can hold different roles in different orgs.
@@ -94,18 +102,22 @@ All domain queries are scoped by `organizationId`. The schema enforces this with
 
 Configuration is loaded via `@nestjs/config` (global `ConfigModule`). Sensitive values like the JWT secret use `getOrThrow()` so misconfigurations surface immediately at startup.
 
-### 1.8 Dev vs Production
+### 1.8 Environment Layout
 
-The same codebase supports both environments through Docker Compose layering:
+The same codebase supports explicit `dev`, `qa`, and `prod` environments through Docker Compose layering:
 
 ```bash
-make dev-build       # uses docker-compose.override.yml → hot-reload, volume mounts
-make prod-build      # uses docker-compose.prod.yml → multi-stage build, non-root user, node dist/main
+make dev-build       # hot reload + local Postgres on 5432 + backend on 8080
+make qa-build        # production-mode backend + local Postgres on 5433 + backend on 8081
+make prod-build      # skeletal production overlay on 8082, awaiting real prod credentials
 ```
 
-The Dockerfile has three stages:
+The Dockerfile has four stages:
 - **builder** — installs all deps, generates Prisma client, compiles TypeScript
-- **production** — copies only `dist/` and production `node_modules`, runs as a non-root `nestjs` user
 - **development** — full source with dev dependencies for hot-reload
+- **migrations** — Prisma CLI + schema + seed sources for one-shot migrate / seed operations
+- **production** — copies only `dist/` and production `node_modules`, runs as a non-root `nestjs` user
 
-In production, `helmet`, `compression`, CORS, and graceful shutdown hooks (`enableShutdownHooks()`) are all active. The connection pool is configurable via environment variables for tuning under load.
+Environment-specific commands are driven by `.env.dev`, `.env.qa`, and `.env.prod`, each paired with a shared base compose file plus an environment overlay. Dev and QA can run at the same time because they use separate Compose project names, database ports, and backend ports.
+
+In production mode, `helmet`, `compression`, CORS, and graceful shutdown hooks (`enableShutdownHooks()`) are all active. The connection pool is configurable via environment variables for tuning under load. QA uses the same production runtime path as prod, plus the dedicated `migrate` service because the production runtime image intentionally does not carry the Prisma CLI or migration files.

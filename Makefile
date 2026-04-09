@@ -1,49 +1,66 @@
-.PHONY: up down build logs dev dev-build prod prod-build
+.PHONY: \
+	env-check \
+	dev-up dev-build dev-down dev-migrate dev-seed dev-logs \
+	qa-up qa-build qa-down qa-migrate qa-seed qa-logs \
+	prod-up prod-build prod-down prod-migrate prod-logs
 
-# ── Development (uses docker-compose.override.yml automatically) ──
-dev:
-	docker compose up
+define compose_cmd
+docker compose --env-file .env.$(1) -f docker-compose.yml -f docker-compose.$(1).yml -p ledgerlight-$(1)
+endef
+
+env-check:
+	./scripts/check-environment-config.sh
+
+# ── Development ──────────────────────────────────────────────────────────────
+dev-up:
+	$(call compose_cmd,dev) up -d
 
 dev-build:
-	docker compose up --build
+	$(call compose_cmd,dev) up -d --build
 
-dev-build-migrate:
-	docker compose up --build --wait
-	make run-migrations
+dev-down:
+	$(call compose_cmd,dev) down --remove-orphans
 
-# ── Production (skips override, uses prod compose) ──
-prod:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+dev-migrate:
+	$(call compose_cmd,dev) --profile tools run --rm --build migrate
+
+dev-seed:
+	$(call compose_cmd,dev) --profile tools run --rm --build migrate npx tsx prisma/seed.ts
+
+dev-logs:
+	$(call compose_cmd,dev) logs -f backend
+
+# ── QA ───────────────────────────────────────────────────────────────────────
+qa-up:
+	$(call compose_cmd,qa) up -d
+
+qa-build:
+	$(call compose_cmd,qa) up -d --build
+
+qa-down:
+	$(call compose_cmd,qa) down --remove-orphans
+
+qa-migrate:
+	$(call compose_cmd,qa) --profile tools run --rm --build migrate
+
+qa-seed:
+	$(call compose_cmd,qa) --profile tools run --rm --build migrate npx tsx prisma/seed.demo.ts
+
+qa-logs:
+	$(call compose_cmd,qa) logs -f backend
+
+# ── Production ───────────────────────────────────────────────────────────────
+prod-up:
+	$(call compose_cmd,prod) up -d
 
 prod-build:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+	$(call compose_cmd,prod) up -d --build
 
-prod-build-migrate:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build --wait
-	make run-migrations-deploy
+prod-down:
+	$(call compose_cmd,prod) down --remove-orphans
 
-# ── Legacy aliases ──
-up: dev
-up-build: dev-build
+prod-migrate:
+	$(call compose_cmd,prod) --profile tools run --rm --build migrate
 
-down:
-	docker compose down
-
-build:
-	docker compose build
-
-logs:
-	docker compose logs -f
-
-# ── Database ──
-run-migrations:
-	docker compose exec backend npx prisma migrate dev
-
-run-migrations-deploy:
-	docker compose exec backend npx prisma migrate deploy
-
-# Mark a migration as applied (adds row into _prisma_migrations table in db)
-# docker compose exec backend npx prisma migrate resolve --applied name_of_migration
-
-run-seed:
-	docker compose exec backend npx tsx prisma/seed.ts
+prod-logs:
+	$(call compose_cmd,prod) logs -f backend
