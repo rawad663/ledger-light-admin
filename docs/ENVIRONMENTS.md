@@ -126,9 +126,11 @@ The QA database keeps the previous demo database tuning flags to speed up large 
 - Prometheus: `http://localhost:9090`
 - Loki: `http://localhost:3100`
 - Tempo: `http://localhost:3200`
+  - API/query backend only; use Grafana Explore for the trace UI
 - PostgreSQL exporter: `http://localhost:9187/metrics`
 
 Grafana uses local default credentials `admin` / `admin` unless you override them in the compose file.
+For traces and log correlation, use `http://localhost:3001/explore` with the `Tempo` and `Loki` datasources instead of browsing Tempo directly on port `3200`.
 
 ### Resetting QA Data
 

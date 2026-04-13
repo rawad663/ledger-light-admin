@@ -26,6 +26,18 @@ services:
       timeout: 5s
       retries: 10
 
+  backend-log-volume-init:
+    image: alpine:3.21
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /var/log/ledgerlight && chown -R 1001:65533 /var/log/ledgerlight && chmod 775 /var/log/ledgerlight",
+      ]
+    volumes:
+      - backend_logs:/var/log/ledgerlight
+    restart: "no"
+
   backend:
     environment:
       NODE_ENV: production
@@ -38,6 +50,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      backend-log-volume-init:
+        condition: service_completed_successfully
       otel-collector:
         condition: service_started
 
@@ -55,6 +69,9 @@ services:
       - backend_logs:/var/log/ledgerlight:ro
     ports:
       - "4318:4318"
+    depends_on:
+      backend-log-volume-init:
+        condition: service_completed_successfully
 
   prometheus:
     image: prom/prometheus:v3.2.1

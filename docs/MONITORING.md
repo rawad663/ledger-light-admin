@@ -33,6 +33,7 @@ Telemetry flows through this path:
 - The backend OpenTelemetry SDK exports traces to the local OpenTelemetry Collector.
 - Prometheus scrapes the backend `/metrics` endpoint and the PostgreSQL exporter.
 - The backend also writes structured log lines to a shared QA volume, and the OpenTelemetry Collector tails that file and forwards logs to Loki.
+- Grafana Explore is the supported UI for both Loki logs and Tempo traces.
 
 ### Why QA only
 
@@ -126,6 +127,7 @@ Backend request and exception logs are now structured JSON lines with fields suc
 - context
 - message
 - request id
+- resource id
 - trace id
 - span id
 - route
@@ -138,6 +140,7 @@ Backend request and exception logs are now structured JSON lines with fields suc
 The backend no longer logs request and response body previews by default. This keeps auth and payment-related data out of routine access logs.
 
 In QA, the backend writes these JSON logs both to stdout and to a shared log file mounted at `/var/log/ledgerlight/backend.ndjson`. The collector reads that file and forwards it to Loki.
+The QA stack prepares that shared volume before the backend starts so the non-root NestJS process can create the log file reliably.
 
 ## QA Stack Files
 
@@ -170,6 +173,19 @@ cd frontend
 LEDGERLIGHT_ENV=qa npm run dev
 ```
 
+### Run the repeatable smoke test
+
+```bash
+node ./scripts/run-qa-monitoring-smoke-test.mjs
+```
+
+Optional flags:
+
+- `--skip-frontend`
+  - only exercise the backend path when the Next.js app is not running
+- `--wait-ms=30000`
+  - increase or reduce the scrape/log-shipping wait before verification
+
 ### Access the tools
 
 - Backend API: `http://localhost:8081`
@@ -179,7 +195,11 @@ LEDGERLIGHT_ENV=qa npm run dev
   - default local credentials: `admin` / `admin`
 - Loki: `http://localhost:3100`
 - Tempo: `http://localhost:3200`
+  - API/query backend only, not a standalone browser UI
 - PostgreSQL exporter: `http://localhost:9187/metrics`
+
+Use Grafana Explore at `http://localhost:3001/explore` for trace and log investigation. Select the `Tempo` datasource for traces and `Loki` for logs.
+For backend request correlation logs in Loki, query the parsed collector attributes such as `attributes_request_id`, `attributes_trace_id`, and `attributes_route`.
 
 ## Default Dashboard and Alerts
 
@@ -202,6 +222,15 @@ Prometheus is provisioned with local QA alerts for:
 - PostgreSQL deadlocks
 
 These are local QA signals, not production paging rules.
+
+## Healthy Verification State
+
+When the QA observability stack is healthy:
+
+- Prometheus targets `backend`, `postgres-exporter`, and `otel-collector` are all `UP`
+- backend structured events appear both on container stdout and in `/var/log/ledgerlight/backend.ndjson`
+- Loki queries return backend request IDs such as smoke-test correlation IDs
+- Tempo traces are searchable through Grafana Explore with the `Tempo` datasource
 
 ## Deferred Work
 
