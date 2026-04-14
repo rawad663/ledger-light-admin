@@ -89,8 +89,8 @@ All features must be covered by tests. Testing is not optional and not an aftert
 
 ## Conventions Reference
 
-- Backend patterns: [docs/BACKEND_CONVENTIONS.md](docs/BACKEND_CONVENTIONS.md)
-- Frontend patterns: [docs/FRONTEND_CONVENTIONS.md](docs/FRONTEND_CONVENTIONS.md)
+- Backend patterns: [docs/convensions/BACKEND_CONVENTIONS.md](docs/convensions/BACKEND_CONVENTIONS.md)
+- Frontend patterns: [docs/convensions/FRONTEND_CONVENTIONS.md](docs/convensions/FRONTEND_CONVENTIONS.md)
 - Project architecture: [docs/domains/*](docs/domains)
 
 ## Security Invariants
