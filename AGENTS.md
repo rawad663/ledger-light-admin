@@ -63,7 +63,22 @@ frontend/
     components/             # UI components (shared/, ui/, feature-specific/)
     hooks/                  # Custom hooks (use-api, use-cursor-pagination, etc.)
     lib/                    # Utilities, formatters, generated API types
+mcp-server/
+  src/
+    auth/                   # TokenManager (3-tier login/refresh/cache), ToolContext, header builder
+    client/                 # Axios singleton, AxiosError → McpError mapper
+    logger/                 # Pino structured logger, logToolCall helper
+    tools/                  # One file per MCP tool (7 tools)
+    config.ts               # Zod-validated env config
+    server.ts               # McpServer construction + tool registration
+    index.ts                # stdio entry point (node dist/index.js)
+  test/                     # Jest unit tests (per-tool + token-manager + error-mapper)
 docs/                       # Conventions and feature design documents
+  convensions/
+    BACKEND_CONVENTIONS.md
+    FRONTEND_CONVENTIONS.md
+    MCP_SERVER_CONVENTIONS.md   # Tool naming, Zod schema rules, auth forwarding, logging, testing
+  MCP_SERVER.md               # Architecture, auth flow, tool catalog, local dev setup
 ```
 
 ## Principles
@@ -91,6 +106,8 @@ All features must be covered by tests. Testing is not optional and not an aftert
 
 - Backend patterns: [docs/convensions/BACKEND_CONVENTIONS.md](docs/convensions/BACKEND_CONVENTIONS.md)
 - Frontend patterns: [docs/convensions/FRONTEND_CONVENTIONS.md](docs/convensions/FRONTEND_CONVENTIONS.md)
+- MCP server patterns: [docs/convensions/MCP_SERVER_CONVENTIONS.md](docs/convensions/MCP_SERVER_CONVENTIONS.md)
+- MCP server architecture: [docs/MCP_SERVER.md](docs/MCP_SERVER.md)
 - Project architecture: [docs/domains/*](docs/domains)
 
 ## Security Invariants
