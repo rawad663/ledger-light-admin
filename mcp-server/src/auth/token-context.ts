@@ -4,7 +4,7 @@ import { log } from "../logger/logger";
 
 export interface ToolContext {
   organizationId: string;
-  accessToken: string | null;
+  accessToken: string;
   correlationId: string;
 }
 
@@ -12,18 +12,22 @@ export async function buildToolContext(
   tokenManager: TokenManager,
   organizationId: string,
 ): Promise<ToolContext> {
+  const correlationId = randomUUID();
+
   try {
     const accessToken = await tokenManager.getAccessToken();
-    return { organizationId, accessToken, correlationId: randomUUID() };
+    return { organizationId, accessToken, correlationId };
   } catch (err) {
-    const data = {
-      error: err,
-      organizationId,
-      correlationId: randomUUID(),
-      accessToken: null,
-    };
-    log(data, "warn", "failed_access_token");
+    log(
+      {
+        error: err,
+        organizationId,
+        correlationId,
+      },
+      "warn",
+      "failed_access_token",
+    );
 
-    return data;
+    throw err;
   }
 }
