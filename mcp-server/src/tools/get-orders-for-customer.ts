@@ -47,6 +47,7 @@ export function registerGetOrdersForCustomer(
     async (rawArgs) => {
       const { customerEmail, status, limit, cursor } = rawArgs as Input;
       const startMs = Date.now();
+
       const ctx = await buildToolContext(
         tokenManager,
         config.MCP_ORGANIZATION_ID,

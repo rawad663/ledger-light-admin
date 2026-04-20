@@ -52,6 +52,7 @@ export function registerSearchOrders(
     async (rawArgs) => {
       const { search, status, locationId, limit, cursor } = rawArgs as Input;
       const startMs = Date.now();
+
       const ctx = await buildToolContext(
         tokenManager,
         config.MCP_ORGANIZATION_ID,

@@ -53,6 +53,7 @@ export function registerCheckInventory(
       const { productId, locationId, lowStockOnly, limit, cursor } =
         rawArgs as Input;
       const startMs = Date.now();
+
       const ctx = await buildToolContext(
         tokenManager,
         config.MCP_ORGANIZATION_ID,
@@ -80,7 +81,7 @@ export function registerCheckInventory(
       } catch (err) {
         logToolCall({
           tool: "check_inventory",
-          organizationId: ctx.organizationId,
+          organizationId: config.MCP_ORGANIZATION_ID,
           correlationId: ctx.correlationId,
           durationMs: Date.now() - startMs,
           resultStatus: "error",
