@@ -33,12 +33,12 @@ export function registerGetOrderDetails(
       const { id } = rawArgs as Input;
       const startMs = Date.now();
 
-      try {
-        const ctx = await buildToolContext(
-          tokenManager,
-          config.MCP_ORGANIZATION_ID,
-        );
+      const ctx = await buildToolContext(
+        tokenManager,
+        config.MCP_ORGANIZATION_ID,
+      );
 
+      try {
         const client = getLedgerlightClient(config);
         const response = await client.get(`/orders/${id}`, {
           headers: buildBackendHeaders(ctx),

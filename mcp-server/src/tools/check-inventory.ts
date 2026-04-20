@@ -54,12 +54,12 @@ export function registerCheckInventory(
         rawArgs as Input;
       const startMs = Date.now();
 
-      try {
-        const ctx = await buildToolContext(
-          tokenManager,
-          config.MCP_ORGANIZATION_ID,
-        );
+      const ctx = await buildToolContext(
+        tokenManager,
+        config.MCP_ORGANIZATION_ID,
+      );
 
+      try {
         const client = getLedgerlightClient(config);
         const response = await client.get("/inventory/levels", {
           headers: buildBackendHeaders(ctx),
@@ -81,7 +81,7 @@ export function registerCheckInventory(
       } catch (err) {
         logToolCall({
           tool: "check_inventory",
-          organizationId: ctx.organizationId,
+          organizationId: config.MCP_ORGANIZATION_ID,
           correlationId: ctx.correlationId,
           durationMs: Date.now() - startMs,
           resultStatus: "error",

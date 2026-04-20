@@ -56,3 +56,16 @@ export function logToolCall(ctx: ToolLogContext): void {
     ...(ctx.isMutating ? { ai_mutating_action: true } : {}),
   });
 }
+
+export function log(
+  data: Record<string, unknown>,
+  level: "warn" | "info" = "info",
+  event?: string,
+): void {
+  const logger = getLogger();
+
+  logger[level]({
+    event: event ?? "event",
+    ...data,
+  });
+}

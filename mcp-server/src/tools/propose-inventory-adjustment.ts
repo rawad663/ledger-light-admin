@@ -74,12 +74,12 @@ export function registerProposeInventoryAdjustment(
       const { productId, locationId, delta, reason, note } = rawArgs as Input;
       const startMs = Date.now();
 
-      try {
-        const ctx = await buildToolContext(
-          tokenManager,
-          config.MCP_ORGANIZATION_ID,
-        );
+      const ctx = await buildToolContext(
+        tokenManager,
+        config.MCP_ORGANIZATION_ID,
+      );
 
+      try {
         // Prefix the note with AI/MCP attribution so it's identifiable in
         // adjustment records and audit logs without requiring a schema change.
         const aiNote = [`[AI/MCP correlationId:${ctx.correlationId}]`, note]
